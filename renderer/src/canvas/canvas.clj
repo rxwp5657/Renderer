@@ -1,6 +1,5 @@
 (ns canvas.canvas
-  (:use [canvas.color]
-        [uncomplicate.fluokitten core jvm]))
+  (:use [canvas.color]))
 
 (defn make-canvas
   "Make a new canvas"

@@ -44,5 +44,5 @@
 
 (deftest s-canvas
   (testing "Saving canvas"
-    (let [cv (make-canvas 100 100)]
+    (let [cv (make-canvas 720 980)]
       (save-canvas cv))))
