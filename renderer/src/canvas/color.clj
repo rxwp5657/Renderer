@@ -54,3 +54,12 @@
   ^doubles
   [^doubles a ^doubles b]
   (fmap e* a b))
+
+(defn pixel-to-255
+  "Convert pixel on 0 - 1 notation to 0 - 255 notation"
+  ^doubles
+  [^doubles pixel]
+  (fmap #(cond
+           (>= % 1) 255
+           (<= % 0) 0
+           :else (Math/ceil (* % 255))) pixel))

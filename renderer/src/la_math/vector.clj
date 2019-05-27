@@ -58,7 +58,7 @@
  [^doubles a ^doubles b]
  (= (seq a) (seq b)))
 
-(defn e+
+(defn- e+
  "Define component-component addition"
  ^double
  [^double a ^double b]
@@ -70,7 +70,7 @@
  [^double a ^double b]
  (* a b))
 
-(defn e-
+(defn- e-
  "Define component-component substraction"
  ^double
  [^double a ^double b]
