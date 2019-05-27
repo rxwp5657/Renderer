@@ -40,9 +40,9 @@
 (deftest pixel-255
   (testing "Convert pixel 0 - 1 to 255"
     (let [pixel (make-color 1.5 0.5 0.32)]
-      (is (c= (pixel-to-255 pixel) (make-color 255 128 82))))))
+      (is (c= (pixel->255 pixel) (make-color 255 128 82))))))
 
 (deftest s-canvas
   (testing "Saving canvas"
-    (let [cv (make-canvas 720 980)]
+    (let [cv (make-canvas 50 50) d (print (:canvas cv))]
       (save-canvas cv))))

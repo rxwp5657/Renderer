@@ -55,7 +55,7 @@
   [^doubles a ^doubles b]
   (fmap e* a b))
 
-(defn pixel-to-255
+(defn pixel->255
   "Convert pixel on 0 - 1 notation to 0 - 255 notation"
   ^doubles
   [^doubles pixel]
