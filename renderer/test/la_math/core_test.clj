@@ -1,6 +1,7 @@
 (ns la-math.core-test
   (:require [clojure.test :refer :all]
-            [la-math.vector :refer :all]))
+            [la-math.vector :refer :all]
+            [la-math.matrix :refer :all]))
 
 (deftest v-test
  (testing "Vector Component and creation"
@@ -57,3 +58,71 @@
       (is (=  (dot a b) 20.0))
       (is (v= (cross a b) c1))
       (is (v= (cross b a) c2)))))
+
+(deftest m4-test
+  (testing "4x4 Matrix creation and access"
+    (let [m (make-matrix 4 4 1 2 3 4
+                             5.5 6.5 7.5 8.5
+                             9 10 11 12
+                             13.5 14.5 15.5 16.5)]
+      (are [t v] (= v t)
+           1.0  (m-rc m 0 0)
+           4.0  (m-rc m 0 3)
+           5.5  (m-rc m 1 0)
+           7.5  (m-rc m 1 2)
+           11.0 (m-rc m 2 2)
+           13.5 (m-rc m 3 0)
+           15.5 (m-rc m 3 2)))))
+
+(deftest m3-test
+  (testing "3x3 Matrix creation and access"
+    (let [m (make-matrix 3 3 -3 5 0
+                              1 -2 -7
+                              0  0 1)]
+      (are [t v] (= v t)
+           -3.0 (m-rc m 0 0)
+           -2.0 (m-rc m 1 1)
+            1.0 (m-rc m 2 2)))))
+
+(deftest m2-test
+  (testing "2x2 Matrix creation and access"
+    (let [m (make-matrix 2 2 -3 5
+                              1 -2)]
+      (are [t v] (= v t)
+           -3.0 (m-rc m 0 0)
+            5.0 (m-rc m 0 1)
+            1.0 (m-rc m 1 0)
+           -2.0 (m-rc m 1 1)))))
+
+(deftest m-equality
+  (testing "Matrix equality"
+    (let [m1 (make-matrix 4 4 1 2 3 4
+                              5 6 7 8
+                              9 8 7 6
+                              5 4 3 2)
+          m2 (make-matrix 4 4 1 2 3 4
+                              5 6 7 8
+                              9 8 7 6
+                              5 4 3 2)
+          m3 (make-matrix 4 4 2 3 4 5
+                              6 7 8 9
+                              8 7 6 5
+                              4 3 2 1)]
+      (is (m= m1 m2))
+      (is (not (m= m1 m3))))))
+
+(deftest m-arithmeticA
+  (testing "Matrix - Matrix multiplication"
+    (let [m1 (make-matrix 4 4 1 2 3 4
+                              5 6 7 8
+                              9 8 7 6
+                              5 4 3 2)
+          m2 (make-matrix 4 4 -2 1 2 3
+                              3 2 1 -1
+                              4 3 6 5
+                              1 2 7 8)
+          r  (make-matrix 4 4 20.0 22.0 50.0 48.0
+                              44.0 54.0 114.0 108.0
+                              40.0 58.0 110.0 102.0
+                              16.0 26.0 46.0 42.0)]
+      (is (m= (m*m m1 m2) r)))))
