@@ -2,6 +2,8 @@
   (:use [la-math.vector]
         [uncomplicate.fluokitten core jvm]))
 
+(declare determinant cofactor minor)
+
 (defn make-matrix
   "Make a 4x4, 3x3 or 2x2 matrix"
   ^doubles
@@ -71,11 +73,27 @@
           c (range (:heigth m))]
       (m-rc m c r))))
 
-(defn determinant
+
+(defn- determinant-2D
   "Calculate 2D matrix determinant"
   ^double
   [^doubles m]
   (- (* (m-rc m 0 0) (m-rc m 1 1)) (* (m-rc m 0 1) (m-rc m 1 0))))
+
+(defn- determinant-M
+  "Calculate any matrix determinant"
+  ^double
+  [^doubles m]
+  (let [cofactors (fmap #(cofactor m 0 %) (range (:width m)))]
+    (foldmap + 0.0 * cofactors (get-r m 0))))
+
+(defn determinant
+  "Calculate matrix determinant"
+  ^double
+  [^doubles m]
+  (if (= (:width m) 2)
+    (determinant-2D m)
+    (determinant-M m)))
 
 (defn submatrix
   "Getting submatrices"
@@ -99,3 +117,35 @@
     (if (= 1 (mod (+ r c) 2))
       (* -1 minor)
       minor)))
+
+(defn invertible?
+  "Is matrix m invertible?"
+  [^doubles m]
+  (not (= 0.0 (determinant m))))
+
+(defn- m-cofactor
+  "Calculate cofactor matrix"
+  ^doubles
+  [^doubles m]
+  (apply make-matrix (:width m) (:heigth m)
+    (for [r (range (:width  m))
+          c (range (:heigth m))]
+      (cofactor m r c))))
+
+(defn div-mc
+  "Divide each matrix entry by a constant"
+  ^doubles
+  [^doubles m c]
+  (apply make-matrix (:width m) (:heigth m) (fmap #(/ % c) (:m m))))
+
+(defn inverse
+  "Calculate the matrix inverse"
+  ^doubles
+  [^doubles m]
+  (when (invertible? m)
+    (div-mc (transpose (m-cofactor m)) (determinant m))))
+
+(defn tetas
+  ([m] (tetas (rest m) (first m)))
+  ([m data]
+   (when (not (empty? m)) (do (print data "\n") (recur (rest m) (first m))))))

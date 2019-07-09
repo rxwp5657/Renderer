@@ -178,3 +178,48 @@
       (are [t r] (= t r)
            (cofactor m 0 0) -12.0
            (cofactor m 1 0) -25.0))))
+
+(deftest cofactors-determinant
+  (testing "Calculating determinants"
+    (let [m1 (make-matrix 3 3 1 2 6
+                             -5 8 -4
+                              2 6 4)
+          m2 (make-matrix 4 4 -2 -8 3 5
+                              -3  1 7 3
+                               1 2 -9 6
+                              -6 7 7 -9)]
+      (are [t r] (= t r)
+           (cofactor m1 0 0) 56.0
+           (cofactor m1 0 1) 12.0
+           (cofactor m1 0 2) -46.0
+           (determinant m1) -196.0
+           (cofactor m2 0 0) 690.0
+           (cofactor m2 0 1) 447.0
+           (cofactor m2 0 2) 210.0
+           (cofactor m2 0 3) 51.0
+           (determinant m2) -4071.0))))
+
+(deftest invertible
+  (testing "Test if is invertible"
+    (let [m1 (make-matrix 4 4 6 4 4 4
+                              5 5 7 6
+                              4 -9 3 -7
+                              9  1 7 -6)
+          m2 (make-matrix 4 4 -4 2 -2 -3
+                               9 6  2 6
+                               0 -5 1 -5
+                               0 0 0 0)]
+      (is (not (invertible? m2)))
+      (is (invertible? m1)))))
+
+(deftest inverse-test
+  (testing "Inverse function"
+    (let [m1 (make-matrix 4 4 -5 2 6 -8
+                               1 -5 1 8
+                               7  7 -6 -7
+                               1 -3 7 4)
+          inv1 (make-matrix 4 4 0.21804511278195488 0.45112781954887216 0.24060150375939848 -0.045112781954887216
+                               -0.8082706766917294  -1.4567669172932332 -0.44360902255639095 0.5206766917293233
+                               -0.07894736842105263 -0.2236842105263158 -0.05263157894736842 0.19736842105263158
+                               -0.5225563909774437 -0.8139097744360902 -0.3007518796992481 0.30639097744360905)]
+      (is (m= (inverse m1) inv1)))))
