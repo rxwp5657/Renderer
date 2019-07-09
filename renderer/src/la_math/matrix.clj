@@ -61,3 +61,41 @@
     (for [r (range (:width  m1))
           c (range (:heigth m2))]
       (dot (get-r m1 r) (get-c m2 c)))))
+
+(defn transpose
+  "Transpoe Matrix m"
+  ^doubles
+  [^doubles m]
+  (apply make-matrix (:width m) (:heigth m)
+    (for [r (range (:width  m))
+          c (range (:heigth m))]
+      (m-rc m c r))))
+
+(defn determinant
+  "Calculate 2D matrix determinant"
+  ^double
+  [^doubles m]
+  (- (* (m-rc m 0 0) (m-rc m 1 1)) (* (m-rc m 0 1) (m-rc m 1 0))))
+
+(defn submatrix
+  "Getting submatrices"
+  ^doubles
+  [^doubles m dr dc]
+  (apply make-matrix (dec (:width m)) (dec (:heigth m))
+    (for [r (range (:width  m))
+          c (range (:heigth m))
+          :when (not (or (= dr r) (= dc c)))]
+      (m-rc m r c))))
+
+(defn minor
+  "Getting 3x3 matrix minor"
+  [^doubles m r c]
+  (determinant (submatrix m r c)))
+
+(defn cofactor
+  "Calculate 3x3 matrix cofactor"
+  [^doubles m r c]
+  (let [minor (minor m r c)]
+    (if (= 1 (mod (+ r c) 2))
+      (* -1 minor)
+      minor)))

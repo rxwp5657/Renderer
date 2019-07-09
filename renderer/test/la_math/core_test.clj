@@ -126,3 +126,55 @@
                               40.0 58.0 110.0 102.0
                               16.0 26.0 46.0 42.0)]
       (is (m= (m*m m1 m2) r)))))
+
+(deftest transpose-test
+  (testing "Transpoe Matrix M"
+    (let [m (make-matrix 4 4 0 9 3 0
+                             9 8 0 8
+                             1 8 5 3
+                             0 0 5 8)
+          transposed (make-matrix 4 4 0 9 1 0
+                                      9 8 8 0
+                                      3 0 5 5
+                                      0 8 3 8)]
+      (is (m= (transpose m) transposed)))))
+
+(deftest determinant-2D
+  (testing "Calculating 2D determinant"
+    (let [m (make-matrix 2 2 1 5
+                             -3 2)]
+      (is (= (determinant m) 17.0)))))
+
+(deftest submatrix-test
+  (testing "Getting submatrices"
+    (let [m1 (make-matrix 3 3 1 5 0
+                             -3 2 7
+                              0 6 -3)
+          m2 (make-matrix 4 4 -6 1 1 6
+                              -8 5 8 6
+                              -1 0 8 2
+                              -7 1 -1 1)
+          sub1 (make-matrix 2 2 -3 2
+                                 0 6)
+          sub2 (make-matrix 3 3 -6 1 6
+                                -8 8 6
+                                -7 -1 1)]
+      (are [t r] (m= t r)
+           (submatrix m1 0 2) sub1
+           (submatrix m2 2 1) sub2))))
+
+(deftest minors-test
+  (testing "Manipulating minors"
+    (let [m (make-matrix 3 3 3 5 0
+                             2 -1 -7
+                             6 -1  5)]
+      (is (= (minor m 1 0) 25.0)))))
+
+(deftest cofactor-test
+  (testing "Computing cofactors"
+    (let [m (make-matrix 3 3 3 5 0
+                             2 -1 -7
+                             6 -1  5)]
+      (are [t r] (= t r)
+           (cofactor m 0 0) -12.0
+           (cofactor m 1 0) -25.0))))
