@@ -5,20 +5,19 @@
 (declare determinant cofactor minor)
 
 (defn make-matrix
-  "Make a 4x4, 3x3 or 2x2 matrix"
+  "Make a matrix"
   ^doubles
-  ([w ht a b c d
-         e f g h
-         i j k l
-         m n o p]
-   {:width w :heigth ht :m (double-array [a b c d e f g h i j k l m n o p])})
-  ([w ht a b c
-         d e f
-         g h i]
-   {:width w :heigth ht :m (double-array [a b c d e f g h i])})
-  ([w h a b
-        c d]
-   {:width w :heigth h  :m (double-array [a b c d])}))
+  [& data]
+  (double-array (into [] data)))
+
+(defn- width
+  [^doubles m]
+  (let [len (alength m)]
+    (cond
+      (= len 16) 4
+      (= len 9)  3
+      (= len 4)  2
+      :else 0)))
 
 (defn- get-rc
   "Transform 2D coordinate to 1D"
@@ -29,48 +28,41 @@
   "Get the value on the row r and column c"
   ^double
   [^doubles m r c]
-  (aget (:m m) (get-rc (:width m) r c)))
+  (aget m (get-rc (width m) r c)))
 
 (defn m=
   "Check if matrices m1 and m2 are the same"
   [^doubles m1 ^doubles m2]
-  (let [res (for [r (range (:width m1))
-                  c (range (:width m2))
-                  :let  [y 1]
-                  :when (= (m-rc m1 r c) (m-rc m2 r c))] y)]
-    (if (= (* (:width m1) (:width m1))
-           (alength (to-array res)))
-      true
-      false)))
+  (v= m1 m2))
 
 (defn- get-r
   "Get row of matrix m"
   ^doubles
   [^doubles m r]
-  (double-array (fmap #(m-rc m r %) (range (:width m)))))
+  (double-array (fmap #(m-rc m r %) (range (width m)))))
 
 (defn- get-c
   "Get column of matrix m"
   ^doubles
   [^doubles m c]
-  (double-array (fmap #(m-rc m % c) (range (:width m)))))
+  (double-array (fmap #(m-rc m % c) (range (width m)))))
 
 (defn m*m
   "Matrix - Matrix multiplication"
   ^doubles
   [^doubles m1 ^doubles m2]
-  (apply make-matrix (:width m1) (:heigth m2)
-    (for [r (range (:width  m1))
-          c (range (:heigth m2))]
+  (apply make-matrix
+    (for [r (range (width m1))
+          c (range (width m2))]
       (dot (get-r m1 r) (get-c m2 c)))))
 
 (defn transpose
   "Transpoe Matrix m"
   ^doubles
   [^doubles m]
-  (apply make-matrix (:width m) (:heigth m)
-    (for [r (range (:width  m))
-          c (range (:heigth m))]
+  (apply make-matrix
+    (for [r (range (width  m))
+          c (range (width  m))]
       (m-rc m c r))))
 
 
@@ -84,14 +76,14 @@
   "Calculate any matrix determinant"
   ^double
   [^doubles m]
-  (let [cofactors (fmap #(cofactor m 0 %) (range (:width m)))]
+  (let [cofactors (fmap #(cofactor m 0 %) (range (width m)))]
     (foldmap + 0.0 * cofactors (get-r m 0))))
 
 (defn determinant
   "Calculate matrix determinant"
   ^double
   [^doubles m]
-  (if (= (:width m) 2)
+  (if (= (width m) 2)
     (determinant-2D m)
     (determinant-M m)))
 
@@ -99,9 +91,9 @@
   "Getting submatrices"
   ^doubles
   [^doubles m dr dc]
-  (apply make-matrix (dec (:width m)) (dec (:heigth m))
-    (for [r (range (:width  m))
-          c (range (:heigth m))
+  (apply make-matrix
+    (for [r (range (width m))
+          c (range (width m))
           :when (not (or (= dr r) (= dc c)))]
       (m-rc m r c))))
 
@@ -127,16 +119,16 @@
   "Calculate cofactor matrix"
   ^doubles
   [^doubles m]
-  (apply make-matrix (:width m) (:heigth m)
-    (for [r (range (:width  m))
-          c (range (:heigth m))]
+  (apply make-matrix
+    (for [r (range (width  m))
+          c (range (width m))]
       (cofactor m r c))))
 
 (defn div-mc
   "Divide each matrix entry by a constant"
   ^doubles
   [^doubles m c]
-  (apply make-matrix (:width m) (:heigth m) (fmap #(/ % c) (:m m))))
+  (apply make-matrix (fmap #(/ % c) m)))
 
 (defn inverse
   "Calculate the matrix inverse"
@@ -144,8 +136,3 @@
   [^doubles m]
   (when (invertible? m)
     (div-mc (transpose (m-cofactor m)) (determinant m))))
-
-(defn tetas
-  ([m] (tetas (rest m) (first m)))
-  ([m data]
-   (when (not (empty? m)) (do (print data "\n") (recur (rest m) (first m))))))

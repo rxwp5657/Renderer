@@ -4,8 +4,8 @@
 (defn make-tuple
   "Create a Java double array of size 4"
   ^doubles
-  [x y z w]
-  (double-array [x y z w]))
+  [& data]
+  (double-array (into [] data)))
 
 (defn make-point
   "Create a Java double array of size 4 where the last value is 1 (represents a point)"
@@ -45,12 +45,12 @@
 
 (defn vec?
  "Check if the given Java array t represents a vector"
- [t]
+ [^doubles t]
  (= (w t) 0.0))
 
 (defn point?
  "Check if the given Java array t represents a point"
- [t]
+ [^doubles t]
  (= (w t) 1.0))
 
 (defn v=
