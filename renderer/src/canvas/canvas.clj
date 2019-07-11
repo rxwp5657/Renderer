@@ -37,9 +37,9 @@
   "Returns vector with pixel r g b components converted to 0 - 255 format"
   [pixel t]
   (let [np (pixel->255 pixel)]
-    [(r np) " "
-     (g np) " "
-     (b np) t]))
+    [(int (r np)) " "
+     (int (g np)) " "
+     (int (b np)) t]))
 
 (defn- write-ppm
   "Write pixel data to ppm file"

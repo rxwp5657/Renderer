@@ -56,6 +56,15 @@
           c (range (width m2))]
       (dot (get-r m1 r) (get-c m2 c)))))
 
+(defn m*v
+  "Matrix - Vector multiplication"
+  ^doubles
+  [^doubles m ^doubles v]
+  (apply make-matrix
+    (for [r (range (width m))
+          c (range 1)]
+      (dot (get-r m r) v))))
+
 (defn transpose
   "Transpoe Matrix m"
   ^doubles
@@ -136,3 +145,81 @@
   [^doubles m]
   (when (invertible? m)
     (div-mc (transpose (m-cofactor m)) (determinant m))))
+
+(defn translation
+  "return a translation matrix"
+  ^doubles
+  [x y z]
+  (make-matrix 1 0 0 x
+               0 1 0 y
+               0 0 1 z
+               0 0 0 1))
+(defn scaling
+  "return a scalation matrix"
+  ^doubles
+  [x y z]
+  (make-matrix x 0 0 0
+               0 y 0 0
+               0 0 z 0
+               0 0 0 1))
+
+(defn rotation-x
+  "return a rotation matrix through the x axis"
+  ^doubles
+  [^double r]
+  (make-matrix 1 0 0 0
+               0 (Math/cos r) (* -1 (Math/sin r)) 0
+               0 (Math/sin r) (Math/cos r) 0
+               0 0 0 1))
+
+(defn rotation-y
+  "return a rotation matrix through the y axis"
+  ^doubles
+  [^double r]
+  (make-matrix (Math/cos r) 0 (Math/sin r) 0
+               0 1 0 0
+               (* -1 (Math/sin r)) 0 (Math/cos r) 0
+               0 0 0 1))
+
+(defn rotation-z
+  "return a rotation matrix through the z axis"
+  ^doubles
+  [^double r]
+  (make-matrix (Math/cos r) (* -1 (Math/sin r)) 0 0
+               (Math/sin r) (Math/cos r) 0 0
+               0 0 1 0
+               0 0 0 1))
+
+(defn shearing
+  "Make shearing transform"
+  ^doubles
+  [a b c d e f]
+  (make-matrix 1 a b 0
+               c 1 d 0
+               e f 1 0
+               0 0 0 1))
+(defn identity-m
+  "return identity matrix"
+  ^doubles
+  []
+  (make-matrix 1 0 0 0
+               0 1 0 0
+               0 0 1 0
+               0 0 0 1))
+
+(defn transform
+  "chaining transformations point * (rotation * scaling * translation)"
+  ^doubles
+  [^doubles p ^doubles r ^doubles s ^doubles t]
+  (m*v (m*m t (m*m s (m*m r (identity-m)))) p))
+
+
+(defn print-r
+      ([m]
+       (print-r (first m) (rest m)))
+      ([value res]
+       (if (not (empty? res))
+         (do
+           (print value "\n")
+           (recur (first res) (rest res)))
+         (print (last res)))))
