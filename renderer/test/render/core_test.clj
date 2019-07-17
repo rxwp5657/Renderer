@@ -3,7 +3,8 @@
             [la-math.vector :refer :all]
             [la-math.matrix :refer :all]
             [render.ray-tracer :refer :all]
-            [render.core :refer :all]))
+            [render.core :refer :all]
+            [canvas.color :refer :all]))
 
 (deftest translation-test
   (testing "translation"
@@ -207,3 +208,111 @@
       (is (= 3.0 (:t (first xs))))
       (is (= 7.0 (:t (last  xs))))
       (is (= 0 (count xs2))))))
+
+(deftest normal-sphere-test
+  (testing "Normal vector of a sphere"
+   (let [s  (make-sphere)
+         n1 (normal-at s (make-point 1 0 0))
+         n2 (normal-at s (make-point 0 1 0))
+         n3 (normal-at s (make-point 0 0 1))
+         n4 (normal-at s (make-point (/ (Math/sqrt 3) 3) (/ (Math/sqrt 3) 3) (/ (Math/sqrt 3) 3)))]
+      (is (v= n1 (make-vector 1 0 0)))
+      (is (v= n2 (make-vector 0 1 0)))
+      (is (v= n3 (make-vector 0 0 1)))
+      (is (v= n4 (make-vector (/ (Math/sqrt 3) 3) (/ (Math/sqrt 3) 3) (/ (Math/sqrt 3) 3))))
+      (is (v= n4 (norm (make-vector (/ (Math/sqrt 3) 3) (/ (Math/sqrt 3) 3) (/ (Math/sqrt 3) 3))))))))
+
+(deftest normal-displaced-sphere-test
+  (testing "Normal vector of a sphere that is not centered on the origin"
+    (let [s  (set-transform (make-sphere) (translation 0 1 0))
+          s2 (set-transform (make-sphere) (m*m (scaling 1 0.5 1) (rotation-z (/ Math/PI 5))))
+          n1 (normal-at s (make-point 0 1.70711 -0.70711))
+          n2 (normal-at s2 (make-point 0 (/ (Math/sqrt 2) 2) (* -1 (/ (Math/sqrt 2) 2))))]
+      (is (v= n1 (make-vector 0 0.7071067811865475 -0.7071067811865476)))
+      (is (v= n2 (make-vector 0 0.9701425001453319 -0.2425356250363329))))))
+
+(deftest reflection-test
+  (testing "Testing reflection"
+    (let [v1 (make-vector 1 -1 0)
+          n1 (make-vector 0 1 0)
+          r1 (reflect v1 n1)
+          v2 (make-vector 0 -1 0)
+          n2 (make-vector (/ (Math/sqrt 2) 2) (/ (Math/sqrt 2) 2) 0)
+          r2 (reflect v2 n2)]
+      (is (v= r1 (make-vector 1 1 0)))
+      (is (v= r2 (make-vector 1.0000000000000002  2.220446049250313E-16 0))))))
+
+(deftest light-source-test
+  (testing "light source testing"
+    (let [intensity (make-color 1 1 1)
+          pos (make-point 0 0 0)
+          light (make-light-point pos intensity)]
+      (is (v= pos (:position  light)))
+      (is (c= intensity (:intensity light))))))
+
+(deftest material-test
+  (testing "material creation test"
+    (let [material (make-material (make-color 1 1 1) 0.1 0.9 0.9 200)]
+      (is (c= (make-color 1 1 1) (:color material)))
+      (is (= 0.1 (:ambient material)))
+      (is (= 0.9 (:diffuse material)))
+      (is (= 0.9 (:spectacular material)))
+      (is (= 200 (:shininess material))))))
+
+(deftest sphere-material-test
+  (testing "adding material to sphere"
+    (let [s  (make-sphere)
+          m  (make-material)
+          m2 (set-ambient m 1)
+          s2 (set-material s m2)]
+      (is (= (:ambient (:material s2)) 1)))))
+
+(deftest light-test-1
+  (testing "lighting with the eye between the light and the surface"
+    (let [m    (make-material)
+          pos  (make-point 0 0 0)
+          eyev (make-vector 0 0 -1)
+          normalv (make-vector 0 0 -1)
+          light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
+          result (lighting m light pos eyev normalv)]
+      (is (c= result (make-color 1.9000000000000001 1.9000000000000001 1.9000000000000001))))))
+
+(deftest light-test-2
+  (testing "lighting with the eye between the light and the surface, eye offset at 45 degree"
+    (let [m    (make-material)
+          pos  (make-point 0 0 0)
+          eyev (make-vector 0 (/ (Math/sqrt 2) 2) (* -1 (/ (Math/sqrt 2) 2)))
+          normalv (make-vector 0 0 -1)
+          light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
+          result (lighting m light pos eyev normalv)]
+      (is (c= result (make-color 1.0 1.0 1.0))))))
+
+(deftest light-test-3
+  (testing "lighting with the eye opoosite to the surface, light offset at 45 degree"
+    (let [m    (make-material)
+          pos  (make-point 0 0 0)
+          eyev (make-vector 0 0 -1)
+          normalv (make-vector 0 0 -1)
+          light (make-light-point (make-point 0 10 -10) (make-color 1 1 1))
+          result (lighting m light pos eyev normalv)]
+      (is (c= result (make-color 0.7363961030678927 0.7363961030678927 0.7363961030678927))))))
+
+(deftest light-test-4
+  (testing "lighting with the eye in the path of reflection vector"
+    (let [m    (make-material)
+          pos  (make-point 0 0 0)
+          eyev (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (* -1 (/ (Math/sqrt 2) 2)))
+          normalv (make-vector 0 0 -1)
+          light (make-light-point (make-point 0 10 -10) (make-color 1 1 1))
+          result (lighting m light pos eyev normalv)]
+      (is (c= result (make-color 1.6363961030678928 1.6363961030678928 1.6363961030678928))))))
+
+(deftest light-test-5
+  (testing "lighting with the lght behind the surface"
+    (let [m    (make-material)
+          pos  (make-point 0 0 0)
+          eyev (make-vector 0 0 -1)
+          normalv (make-vector 0 0 -1)
+          light (make-light-point (make-point 0 0 10) (make-color 1 1 1))
+          result (lighting m light pos eyev normalv)]
+      (is (c= result (make-color 0.1 0.1 0.1))))))

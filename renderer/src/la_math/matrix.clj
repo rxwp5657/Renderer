@@ -220,6 +220,6 @@
       ([value res]
        (if (not (empty? res))
          (do
-           (print value "\n")
+           (print value " ")
            (recur (first res) (rest res)))
-         (print (last res)))))
+         (print (last res) "\n"))))
