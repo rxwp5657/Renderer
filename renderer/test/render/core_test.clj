@@ -3,8 +3,10 @@
             [la-math.vector :refer :all]
             [la-math.matrix :refer :all]
             [render.ray-tracer :refer :all]
-            [render.core :refer :all]
-            [canvas.color :refer :all]))
+            [render.core  :refer :all]
+            [canvas.color :refer :all]
+            [canvas.canvas :refer :all]
+            [render.scene :refer :all]))
 
 (deftest translation-test
   (testing "translation"
@@ -95,6 +97,8 @@
         translation (translation 10 5 7)
         result (make-point 15 0 7)]
     (is (v= result (transform p rotation scaling translation)))))
+
+;; Ray tests
 
 (deftest ray-test
   (testing "ray creation test"
@@ -231,6 +235,8 @@
       (is (v= n1 (make-vector 0 0.7071067811865475 -0.7071067811865476)))
       (is (v= n2 (make-vector 0 0.9701425001453319 -0.2425356250363329))))))
 
+;; Phong reflection algorithm
+
 (deftest reflection-test
   (testing "Testing reflection"
     (let [v1 (make-vector 1 -1 0)
@@ -316,3 +322,171 @@
           light (make-light-point (make-point 0 0 10) (make-color 1 1 1))
           result (lighting m light pos eyev normalv)]
       (is (c= result (make-color 0.1 0.1 0.1))))))
+
+;; Scene tests
+
+(deftest default-world-creation-test
+  (testing "Default World creation"
+    (let [light (make-light-point (make-point -10 10 -10) (make-color 1 1 1))
+          s1 (set-material  (make-sphere) (set-color (set-diffuse (set-spectacular (make-material) 0.2) 0.7) (make-color 0.8 1.0 0.6)))
+          s2 (set-transform (make-sphere) (scaling 0.5 0.5 0.5))
+          w  (make-default-world)]
+      (is (contains-obj w s1))
+      (is (contains-obj w s2))
+      (is (light= light (:light w))))))
+
+(deftest intersect-world-test
+  (testing "testing intersect world function"
+    (let [w   (make-default-world)
+          ray (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          xs  (intersect-world w ray)]
+      (is (= 4 (count xs)))
+      (is (= 4.0 (:t (get xs 0))))
+      (is (= 4.5 (:t (get xs 1))))
+      (is (= 5.5 (:t (get xs 2))))
+      (is (= 6.0 (:t (get xs 3)))))))
+
+(deftest prepare-computations-test
+  (testing "Prepate computations test"
+    (let [ray   (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          shape (make-sphere)
+          intersection (make-intersection 4 shape)
+          comps (prepare-computations intersection ray)]
+      (is (= (:t intersection) (:t comps)))
+      (is (s= (:object intersection) (:object comps)))
+      (is (v= (:point comps) (make-point 0 0 -1)))
+      (is (v= (:eyev  comps) (make-vector 0 0 -1)))
+      (is (v= (:normalv comps) (make-vector 0 0 -1))))))
+
+(deftest prepare-computations-test
+  (testing "Prepate computations test 2"
+    (let [ray   (make-ray (make-point 0 0 0) (make-vector 0 0 1))
+          shape (make-sphere)
+          intersection (make-intersection 1 shape)
+          comps (prepare-computations intersection ray)]
+      (is (v= (:point comps) (make-point 0 0 1)))
+      (is (v= (:eyev  comps) (make-vector 0 0 -1)))
+      (is (v= (:normalv comps) (make-vector 0 0 -1)))
+      (is (:inside comps)))))
+
+(deftest shading-intersection-1
+  (testing "color intersection test 1 "
+    (let [world (make-default-world)
+          ray   (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          shape (first (:objects world))
+          intersection (make-intersection 4 shape)
+          comps (prepare-computations intersection ray)
+          res (shade-hit world comps)]
+      (is (c= (make-color 0.38066119308103435 0.47582649135129296 0.28549589481077575) res)))))
+
+(deftest shading-intersection-2
+  (testing "color intersection test 2"
+    (let [w     (make-default-world)
+          world (set-light w (make-light-point (make-point 0 0.25 0) (make-color 1 1 1)))
+          ray   (make-ray (make-point 0 0 0) (make-vector 0 0 1))
+          shape (last (:objects world))
+          intersection (make-intersection 0.5 shape)
+          comps (prepare-computations intersection ray)
+          res (shade-hit world comps)]
+      (is (c= (make-color 0.9049844720832575 0.9049844720832575 0.9049844720832575) res)))))
+
+(deftest world-feature-case-1
+  (testing "The color when the ray misses"
+    (let [world (make-default-world)
+          ray   (make-ray (make-point 0 0 -5) (make-vector 0 1 0))
+          res   (color-at world ray)]
+      (is (c= (make-color 0 0 0) res)))))
+
+(deftest world-feature-case-2
+  (testing "The color when the ray hits"
+    (let [world (make-default-world)
+          ray   (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          res   (color-at world ray)]
+      (is (c= (make-color 0.38066119308103435 0.47582649135129296 0.28549589481077575) res)))))
+
+(deftest world-feature-case-3
+  (testing "The color whith an intersection behind the ray"
+    (let [w1 (make-default-world)
+          w2 (change-object w1 0 (set-material (first (:objects w1)) (set-ambient (:material (first (:objects w1))) 1)))
+          w3 (change-object w2 1 (set-material (last (:objects w2))  (set-ambient (:material (last (:objects w2))) 1)))
+          ray   (make-ray (make-point 0 0 0.75) (make-vector 0 0 -1))
+          res   (color-at w3 ray)]
+      (is (c= (:color (:material (last (:objects w3)))) res)))))
+
+(deftest view-transform-1
+  (testing "The transformation matrix for the default orientation"
+    (let [from (make-point 0 0 0)
+          to   (make-point 0 0 -1)
+          up   (make-vector 0 1 0)
+          t    (make-view-transform from to up)]
+      (is (m= (identity-m) t)))))
+
+(deftest view-transform-2
+  (testing "A view transformation matrix looking in positive z direction"
+    (let [from (make-point 0 0 0)
+          to   (make-point 0 0 1)
+          up   (make-vector 0 1 0)
+          t    (make-view-transform from to up)]
+      (is (m= (scaling -1 1 -1) t)))))
+
+(deftest view-transform-3
+  (testing "The view transformation moves the world"
+    (let [from (make-point 0 0 8)
+          to   (make-point 0 0 0)
+          up   (make-vector 0 1 0)
+          t    (make-view-transform from to up)]
+      (is (m= (translation 0 0 -8) t)))))
+
+(deftest view-transform-4
+  (testing "An arbitrary view transform"
+    (let [from (make-point 1 2 3)
+          to   (make-point 4 -2 8)
+          up   (make-vector 1 1 0)
+          t    (make-view-transform from to up)]
+      (is (m= (make-matrix -0.4999999999999999  0.4999999999999999  0.7 -2.5999999999999996
+                            0.7495331880577403  0.6505382386916236 0.07071067811865475 -2.2627416997969516
+                           -0.4242640687119285  0.565685424949238 -0.7071067811865475 1.414213562373095
+                            0.00000 0.00000  0.00000 1.00000) t)))))
+
+(deftest camera-feature-test-1
+  (testing "Camera creation"
+    (let [hsize 160
+          vsize 120
+          fov   (/ Math/PI 2)
+          c (make-camera hsize vsize fov)]
+      (is (= hsize (:hsize c)))
+      (is (= vsize (:vsize c)))
+      (is (= fov   (:fov c)))
+      (is (m= (identity-m) (:transform c))))))
+
+(deftest camera-feature-test-2
+  (testing "Camara pixel size"
+    (let [c1 (make-camera 200 125 (/ Math/PI 2))
+          c2 (make-camera 125 200 (/ Math/PI 2))]
+      (is (= 0.009999999999999998 (:pixel-size c1)))
+      (is (= 0.009999999999999998 (:pixel-size c2))))))
+
+(deftest camera-feature-test-3
+  (testing "Testing ray for pixel"
+    (let [c  (make-camera 201 101 (/ Math/PI 2))
+          c2 (set-camera-transform c (m*m (rotation-y (/ Math/PI 4)) (translation 0 -2 5)))
+          r1 (ray-for-pixel c 100 50)
+          r2 (ray-for-pixel c 0 0)
+          r3 (ray-for-pixel c2 100 50)]
+      (is (v= (make-point  0 0 0)  (:origin r1)))
+      (is (v= (make-vector -0.40689086109769085  0.40689086109769096  -0.8178506308063589) (:direction r1)))
+      (is (v= (make-point  0 0 0)  (:origin r2)))
+      (is (v= (make-vector 0.3325932130597254  0.6651864261194508  -0.6685123582500481) (:direction r2)))
+      (is (v= (make-point  0 2 -5)  (:origin r3)))
+      (is (v= (make-vector 0.2905924399558609  0.4068908610976908  -0.8660230141258828)  (:direction r3))))))
+
+(deftest render-function-test
+  (testing "Testing render camera"
+    (let [w (make-default-world)
+          c (make-camera 11 11 (/ Math/PI 2))
+          from (make-point 0 0 -5)
+          to   (make-point 0 0 0)
+          up   (make-vector 0 1 0)
+          c2   (set-camera-transform c (make-view-transform from to up))
+          image (render c2 w)]
+      (is (c= (make-color 0.38066119308103435 0.47582649135129296 0.28549589481077575) (get-pixel image 5 5))))))

@@ -1,50 +1,39 @@
 (ns render.core
   (:gen-class)
   (:use [render.ray-tracer]
+        [render.scene]
         [canvas.canvas]
         [canvas.color]
         [la-math.vector]
         [la-math.matrix]))
 
-(def ray-origin (make-point 0 0 -5))
-(def wall-z 10)
-(def wall-size 7)
-(def canvas-pixels 500)
-(def pixel-size (/ wall-size canvas-pixels))
-(def half (/ wall-size 2))
+(def material (make-material (make-color 1 0.9 0.9) 0.1 0.9 0 200))
+(def floor (set-transform (set-material (make-sphere) material) (scaling 10 0.01 10)))
+(def left-wall (set-transform (set-material (make-sphere) material) (m*m (translation 0 0 5)
+                                                                         (m*m (rotation-y (/ (* -1 Math/PI) 4))
+                                                                              (m*m (rotation-x (/ Math/PI 2))
+                                                                                   (scaling 10 0.01 10))))))
 
-(def color  (make-color 1 0 0))
-(def shape  (set-material (make-sphere) (set-color (make-material) (make-color 0 1 0))))
+(def right-wall (set-transform (set-material (make-sphere) material) (m*m (translation 0 0 5)
+                                                                         (m*m (rotation-y (/ Math/PI 4))
+                                                                              (m*m (rotation-x (/ Math/PI 2))
+                                                                                   (scaling 10 0.01 10))))))
 
-(def light-position (make-point -10 10 -10))
-(def light-color (make-color 1 1 1))
-(def light (make-light-point light-position light-color))
+(def middle (set-transform (set-material (make-sphere)
+                                         (make-material (make-color 0.1 1 0.5) 0.1 0.7 0.3 200))
+                           (translation -0.5 1 0.5)))
 
-(defn get-circle-coordinates
-  []
-  (for [y (range (- canvas-pixels 1))
-        x (range (- canvas-pixels 1))
-        :let [world-y  (- half (* pixel-size y))
-              world-x  (+ (* -1 half) (* pixel-size x))
-              pos (make-point world-x world-y wall-z)
-              r  (make-ray ray-origin (norm (v- pos ray-origin)))
-              xs (intersect shape r)]
-        :when (not (nil? (hit xs)))]
-    {:x x :y y :color (lighting (:material (:object (hit xs)))
-                                light
-                                (position r (:t (hit xs)))
-                                (neg (:direction r))
-                                (normal-at (:object (hit xs)) (position r (:t (hit xs)))))}))
+(def right (set-transform (set-material (make-sphere)
+                                        (make-material (make-color 0.5 1 0.2) 0.1 0.7 0.3 200))
+                          (m*m (translation 1.5 0.5 -0.5) (scaling 0.5 0.5 0.5))))
 
+(def left (set-transform (set-material (make-sphere)
+                                       (make-material (make-color 1 0.8 0.1) 0.1 0.7 0.3 200))
+                         (m*m (translation -1.5 0.33 -0.75) (scaling 0.33 0.33 0.33))))
+
+(def world (make-world (make-light-point (make-point -10 10 -10) (make-color 1 1 1)) floor left-wall right-wall middle right left))
+(def camera (set-camera-transform (make-camera 500 500 (/ Math/PI 3)) (make-view-transform (make-point 0 1.5 -5) (make-point 0 1 0) (make-vector 0 1 0))))
 
 (defn -main
   [& args]
-  (let [coordinates (get-circle-coordinates)]
-    (loop [coordinate (first coordinates)
-           rest-coordinates (rest coordinates)
-           cv (make-canvas canvas-pixels canvas-pixels)]
-      (if (empty? rest-coordinates)
-        (save-canvas cv "circle")
-        (do
-          (write-pixel cv (:x coordinate) (:y coordinate) (:color coordinate))
-          (recur (first rest-coordinates) (rest rest-coordinates) cv))))))
+  (save-canvas (render camera world) "scene"))

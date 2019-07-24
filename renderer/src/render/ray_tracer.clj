@@ -106,11 +106,6 @@
   ([color ambient diffuse spectacular shininess]
    {:color color :ambient ambient :diffuse diffuse :spectacular spectacular :shininess shininess}))
 
-(defn s=
-  "Compare two spheres"
-  [s1 s2]
-  (= (:id s1) (:id s2)))
-
 (defn set-transform
   "Add a transformation to a sphere"
    [obj transform]
