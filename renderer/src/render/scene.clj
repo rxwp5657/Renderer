@@ -66,8 +66,8 @@
 
 (defn make-computations
   "Return a computations data-structure"
-  [t object point eyev normalv inside]
-  {:t t :object object :point point :eyev eyev :normalv normalv :inside inside})
+  [t object point eyev normalv inside over-point]
+  {:t t :object object :point point :eyev eyev :normalv normalv :inside inside :over-point over-point})
 
 (defn- inside?
   "If ray is inside the object, return the negative of the normal and set inside to true"
@@ -84,13 +84,27 @@
         point  (position ray t)
         eyev   (neg (:direction ray))
         normal (normal-at object point)
-        inside (inside? normal eyev)]
-    (make-computations t object point eyev (:normal inside) (:inside inside))))
+        inside (inside? normal eyev)
+        over-point (v+ point (v* (:normal inside) 0.00001))]
+    (make-computations t object point eyev (:normal inside) (:inside inside) over-point)))
+
+(defn shadowed?
+  "Check if the point is a shadow"
+  [world point]
+  (let [v (v- (:position (:light world)) point)
+        distance  (mag  v)
+        direction (norm v)
+        ray (make-ray point direction)
+        intersections (intersect-world world ray)
+        hit (hit intersections)]
+    (if (and (not (nil? hit)) (<  (:t hit) distance))
+      true
+      false)))
 
 (defn shade-hit
   "Get the color at the intersection encapsulated on the precomputations"
   [world comps]
-  (lighting (:material (:object comps)) (:light world) (:point comps) (:eyev comps) (:normalv comps)))
+  (lighting (:material (:object comps)) (:light world) (:point comps) (:eyev comps) (:normalv comps) (shadowed? world (:over-point comps))))
 
 (defn change-object
   "Change the object at the nth position of the world"

@@ -280,7 +280,7 @@
           eyev (make-vector 0 0 -1)
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv)]
+          result (lighting m light pos eyev normalv false)]
       (is (c= result (make-color 1.9000000000000001 1.9000000000000001 1.9000000000000001))))))
 
 (deftest light-test-2
@@ -290,7 +290,7 @@
           eyev (make-vector 0 (/ (Math/sqrt 2) 2) (* -1 (/ (Math/sqrt 2) 2)))
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv)]
+          result (lighting m light pos eyev normalv false)]
       (is (c= result (make-color 1.0 1.0 1.0))))))
 
 (deftest light-test-3
@@ -300,7 +300,7 @@
           eyev (make-vector 0 0 -1)
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 10 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv)]
+          result (lighting m light pos eyev normalv false)]
       (is (c= result (make-color 0.7363961030678927 0.7363961030678927 0.7363961030678927))))))
 
 (deftest light-test-4
@@ -310,17 +310,27 @@
           eyev (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (* -1 (/ (Math/sqrt 2) 2)))
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 10 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv)]
+          result (lighting m light pos eyev normalv false)]
       (is (c= result (make-color 1.6363961030678928 1.6363961030678928 1.6363961030678928))))))
 
 (deftest light-test-5
-  (testing "lighting with the lght behind the surface"
+  (testing "lighting with the light behind the surface"
     (let [m    (make-material)
           pos  (make-point 0 0 0)
           eyev (make-vector 0 0 -1)
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 0 10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv)]
+          result (lighting m light pos eyev normalv false)]
+      (is (c= result (make-color 0.1 0.1 0.1))))))
+
+(deftest light-test-6
+  (testing "lighting with the surface in shadow"
+    (let [m    (make-material)
+          pos  (make-point 0 0 0)
+          eyev (make-vector 0 0 -1)
+          normalv (make-vector 0 0 -1)
+          light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
+          result (lighting m light pos eyev normalv true)]
       (is (c= result (make-color 0.1 0.1 0.1))))))
 
 ;; Scene tests
@@ -490,3 +500,37 @@
           c2   (set-camera-transform c (make-view-transform from to up))
           image (render c2 w)]
       (is (c= (make-color 0.38066119308103435 0.47582649135129296 0.28549589481077575) (get-pixel image 5 5))))))
+
+;; Shadows
+
+(deftest shadows-test
+  (testing "shadowed? function"
+    (let [w  (make-default-world)
+          p1 (make-point 0 10 0)
+          p2 (make-point 10 -10 10)
+          p3 (make-point -20 20 -20)
+          p4 (make-point -2 2 -2)]
+      (is (not (shadowed? w p1)))
+      (is (shadowed? w p2))
+      (is (not (shadowed? w p3)))
+      (is (not (shadowed? w p4))))))
+
+(deftest shadow-in-scene
+  (testing "shadow-hit is hiven an intersection in shadow"
+    (let [s1 (make-sphere)
+          s2 (set-transform (make-sphere) (translation 0 0 10))
+          w  (make-world (make-light-point (make-point 0 0 -10) (make-color 1 1 1)) s1 s2)
+          r  (make-ray (make-point 0 0 5) (make-vector 0 0 1))
+          i  (make-intersection 4 s2)
+          comps (prepare-computations i r)
+          res (shade-hit w comps)]
+      (is (c= (make-color 0.1 0.1 0.1) res)))))
+
+(deftest shadow-surface-correction
+  (testing "the hit should offset the point"
+    (let [r (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          shape (set-transform (make-sphere) (translation 0 0 1))
+          i (make-intersection 5 shape)
+          comps (prepare-computations i r)]
+      (is (< (z (:over-point comps)) (/ (* -1 0.00001) 2)))
+      (is (> (z (:point comps)) (z (:over-point comps)))))))

@@ -32,8 +32,8 @@
                          (m*m (translation -1.5 0.33 -0.75) (scaling 0.33 0.33 0.33))))
 
 (def world (make-world (make-light-point (make-point -10 10 -10) (make-color 1 1 1)) floor left-wall right-wall middle right left))
-(def camera (set-camera-transform (make-camera 500 500 (/ Math/PI 3)) (make-view-transform (make-point 0 1.5 -5) (make-point 0 1 0) (make-vector 0 1 0))))
+(def camera (set-camera-transform (make-camera 1000 1000 (/ Math/PI 3)) (make-view-transform (make-point 0 1.5 -5) (make-point 0 1 0) (make-vector 0 1 0))))
 
 (defn -main
   [& args]
-  (save-canvas (render camera world) "scene"))
+  (save-canvas (render camera world) "scene-shadow"))

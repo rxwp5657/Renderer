@@ -123,7 +123,7 @@
 
 (defn lighting
   "Phong Reflection model"
-  [material light point eyev normalv]
+  [material light point eyev normalv in-shadow?]
   (let [effective-color (c*c (:color material) (:intensity light))
         lightv  (norm (v- (:position light) point))
         ambient (v* effective-color (:ambient material))
@@ -134,6 +134,7 @@
         factor (Math/pow reflect-dot-eye (:shininess material))
         specular (c* (:intensity light) (* (:spectacular material) factor))]
     (cond
+      (true? in-shadow?) ambient
       (and (>= light-dot-normal 0) (> reflect-dot-eye 0)) (c+ ambient (c+ diffuse specular))
       (>= light-dot-normal 0) (c+ ambient (c+ diffuse (make-color 0 0 0)))
       :else (c+ ambient (c+ (make-color 0 0 0) (make-color 0 0 0))))))
