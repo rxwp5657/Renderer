@@ -3,6 +3,11 @@
             [la-math.vector :refer :all]
             [la-math.matrix :refer :all]
             [render.ray-tracer :refer :all]
+            [render.data-structures   :refer :all]
+            [render.primitives.shape  :refer :all]
+            [render.primitives.sphere :refer :all]
+            [render.camera :refer :all]
+            [render.world :refer :all]  
             [render.core  :refer :all]
             [canvas.color :refer :all]
             [canvas.canvas :refer :all]
@@ -194,11 +199,11 @@
       (is (v= (:origin r3)    (make-point 2 6 12)))
       (is (v= (:direction r3) (make-vector 0 3 0))))))
 
-(deftest set-sphere-transform-test
-  (testing "Set sphere transform"
-    (let [s  (make-sphere)
+(deftest set-shape-transform-test
+  (testing "Set shape transform"
+    (let [s  (make-shape)
           t  (translation 2 3 4)
-          s2 (set-transform s t)]
+          s2 (set-shape-transform s t)]
       (is (m= t (:transform s2)))
       (is (m= (identity-m) (:transform s))))))
 
@@ -262,15 +267,15 @@
       (is (c= (make-color 1 1 1) (:color material)))
       (is (= 0.1 (:ambient material)))
       (is (= 0.9 (:diffuse material)))
-      (is (= 0.9 (:spectacular material)))
+      (is (= 0.9 (:specular material)))
       (is (= 200 (:shininess material))))))
 
-(deftest sphere-material-test
-  (testing "adding material to sphere"
-    (let [s  (make-sphere)
+(deftest shape-material-test
+  (testing "adding material to shape"
+    (let [s  (make-shape)
           m  (make-material)
           m2 (set-ambient m 1)
-          s2 (set-material s m2)]
+          s2 (set-shape-material s m2)]
       (is (= (:ambient (:material s2)) 1)))))
 
 (deftest light-test-1
@@ -338,7 +343,7 @@
 (deftest default-world-creation-test
   (testing "Default World creation"
     (let [light (make-light-point (make-point -10 10 -10) (make-color 1 1 1))
-          s1 (set-material  (make-sphere) (set-color (set-diffuse (set-spectacular (make-material) 0.2) 0.7) (make-color 0.8 1.0 0.6)))
+          s1 (set-material  (make-sphere) (set-color (set-diffuse (set-specular (make-material) 0.2) 0.7) (make-color 0.8 1.0 0.6)))
           s2 (set-transform (make-sphere) (scaling 0.5 0.5 0.5))
           w  (make-default-world)]
       (is (contains-obj w s1))
@@ -417,11 +422,11 @@
 (deftest world-feature-case-3
   (testing "The color whith an intersection behind the ray"
     (let [w1 (make-default-world)
-          w2 (change-object w1 0 (set-material (first (:objects w1)) (set-ambient (:material (first (:objects w1))) 1)))
-          w3 (change-object w2 1 (set-material (last (:objects w2))  (set-ambient (:material (last (:objects w2))) 1)))
+          w2 (change-object w1 0 (set-material (first (:objects w1)) (set-ambient (:material (:shape (first (:objects w1)))) 1)))
+          w3 (change-object w2 1 (set-material (last (:objects w2))  (set-ambient (:material (:shape (last  (:objects w2)))) 1)))
           ray   (make-ray (make-point 0 0 0.75) (make-vector 0 0 -1))
           res   (color-at w3 ray)]
-      (is (c= (:color (:material (last (:objects w3)))) res)))))
+      (is (c= (:color (:material (:shape (last (:objects w3))))) res)))))
 
 (deftest view-transform-1
   (testing "The transformation matrix for the default orientation"
