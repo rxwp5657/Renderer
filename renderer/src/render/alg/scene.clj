@@ -1,12 +1,11 @@
-(ns render.scene
+(ns render.alg.scene
   (:use [la-math.vector]
         [la-math.matrix]
-        [render.data-structures]
-        [render.primitives.shape]
+        [render.comp.data-structures]
         [render.primitives.sphere]
         [canvas.color]
         [canvas.canvas]
-        [render.ray-tracer]))
+        [render.alg.ray-tracer]))
 
 ;; Helper data structure that encapsulates intersection data
 

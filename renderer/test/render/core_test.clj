@@ -2,16 +2,17 @@
   (:require [clojure.test :refer :all]
             [la-math.vector :refer :all]
             [la-math.matrix :refer :all]
-            [render.ray-tracer :refer :all]
-            [render.data-structures   :refer :all]
+            [render.alg.ray-tracer :refer :all]
+            [render.comp.data-structures   :refer :all]
             [render.primitives.shape  :refer :all]
             [render.primitives.sphere :refer :all]
-            [render.camera :refer :all]
-            [render.world :refer :all]  
+            [render.primitives.plane :refer :all]
+            [render.comp.camera :refer :all]
+            [render.comp.world :refer :all]
             [render.core  :refer :all]
             [canvas.color :refer :all]
             [canvas.canvas :refer :all]
-            [render.scene :refer :all]))
+            [render.alg.scene :refer :all]))
 
 (deftest translation-test
   (testing "translation"
@@ -539,3 +540,31 @@
           comps (prepare-computations i r)]
       (is (< (z (:over-point comps)) (/ (* -1 0.00001) 2)))
       (is (> (z (:point comps)) (z (:over-point comps)))))))
+
+(deftest plane-construction-norma
+  (testing "Plane construction and normal function"
+    (let [plane (make-plane)
+          n1 ((:local-normal-at plane) plane (make-point 0 0 0))
+          n2 ((:local-normal-at plane) plane (make-point 10 0 -10))
+          n3 ((:local-normal-at plane) plane (make-point -5 0 150))]
+      (is (v= n1 (make-vector 0 1 0)))
+      (is (v= n2 (make-vector 0 1 0)))
+      (is (v= n3 (make-vector 0 1 0))))))
+
+(deftest plane-ray-intersection
+  (testing "Plane - ray intersection"
+    (let [plane (make-plane)
+          r1  (make-ray (make-point 0 10 0) (make-vector 0 0 1))
+          r2  (make-ray (make-point 0 0 0)  (make-vector 0 0 1))
+          r3  (make-ray (make-point 0 1 0) (make-vector  0 -1 0))
+          r4  (make-ray (make-point 0 -1 0) (make-vector 0 1 0))
+          xs1 ((:local-intersect plane) plane r1)
+          xs2 ((:local-intersect plane) plane r2)
+          xs3 ((:local-intersect plane) plane r3)
+          xs4 ((:local-intersect plane) plane r4)]
+      (is (empty? xs1))
+      (is (empty? xs2))
+      (is (= 1.0 (:t (first xs3))))
+      (is (= plane (:object (first xs3))))
+      (is (= 1.0 (:t (first xs4))))
+      (is (= plane (:object (first xs4)))))))

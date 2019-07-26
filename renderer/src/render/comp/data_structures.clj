@@ -1,4 +1,4 @@
-(ns render.data-structures
+(ns render.comp.data-structures
   (:use [la-math.vector]
         [canvas.color]))
 

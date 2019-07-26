@@ -1,6 +1,6 @@
 (ns render.primitives.shape
   (:use [la-math.matrix]
-        [render.data-structures]
+        [render.comp.data-structures]
         [canvas.color]))
 
 (defrecord Shape [transform material])

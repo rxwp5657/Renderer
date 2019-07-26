@@ -1,10 +1,10 @@
 (ns render.core
   (:gen-class)
-  (:use [render.ray-tracer]
-        [render.scene]
-        [render.camera]
-        [render.world]
-        [render.data-structures]
+  (:use [render.alg.ray-tracer]
+        [render.alg.scene]
+        [render.comp.camera]
+        [render.comp.world]
+        [render.comp.data-structures]
         [render.primitives.shape]
         [render.primitives.sphere]
         [canvas.canvas]
@@ -41,4 +41,4 @@
 
 (defn -main
   [& args]
-  (save-canvas (render camera world) "scene-shadow"))
+  (save-canvas (render camera world) "scene-shadow-3o"))

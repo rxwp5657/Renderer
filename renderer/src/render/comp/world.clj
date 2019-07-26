@@ -1,8 +1,8 @@
-(ns render.world
+(ns render.comp.world
   (:use [la-math.vector]
         [la-math.matrix]
         [canvas.color]
-        [render.data-structures]
+        [render.comp.data-structures]
         [render.primitives.shape]
         [render.primitives.sphere]))
 

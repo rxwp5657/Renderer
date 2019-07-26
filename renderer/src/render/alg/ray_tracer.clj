@@ -1,5 +1,5 @@
-(ns render.ray-tracer
-  (:use [render.data-structures]
+(ns render.alg.ray-tracer
+  (:use [render.comp.data-structures]
         [la-math.vector]
         [la-math.matrix]
         [canvas.color]))

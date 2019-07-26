@@ -1,6 +1,6 @@
 (ns render.primitives.sphere
   (:use [render.primitives.shape]
-        [render.data-structures]
+        [render.comp.data-structures]
         [la-math.vector]
         [la-math.matrix]
         [canvas.color]))

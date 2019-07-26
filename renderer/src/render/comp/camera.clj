@@ -1,4 +1,4 @@
-(ns render.camera
+(ns render.comp.camera
   (:use [la-math.matrix]
         [canvas.color]))
 
