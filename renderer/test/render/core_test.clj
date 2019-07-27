@@ -12,7 +12,8 @@
             [render.core  :refer :all]
             [canvas.color :refer :all]
             [canvas.canvas :refer :all]
-            [render.alg.scene :refer :all]))
+            [render.alg.scene :refer :all]
+            [render.patterns.stripe :refer :all]))
 
 (deftest translation-test
   (testing "translation"
@@ -264,7 +265,7 @@
 
 (deftest material-test
   (testing "material creation test"
-    (let [material (make-material (make-color 1 1 1) 0.1 0.9 0.9 200)]
+    (let [material (make-material (make-color 1 1 1) 0.1 0.9 0.9 200 nil)]
       (is (c= (make-color 1 1 1) (:color material)))
       (is (= 0.1 (:ambient material)))
       (is (= 0.9 (:diffuse material)))
@@ -541,6 +542,9 @@
       (is (< (z (:over-point comps)) (/ (* -1 0.00001) 2)))
       (is (> (z (:point comps)) (z (:over-point comps)))))))
 
+
+;; Plane
+
 (deftest plane-construction-norma
   (testing "Plane construction and normal function"
     (let [plane (make-plane)
@@ -568,3 +572,72 @@
       (is (= plane (:object (first xs3))))
       (is (= 1.0 (:t (first xs4))))
       (is (= plane (:object (first xs4)))))))
+
+;; Patterns
+
+(deftest patterns-feature-1
+  (testing "Pattern creation"
+    (let [pattern (make-stripe-pattern white black)]
+      (is (c= white (:a pattern)))
+      (is (c= black (:b pattern))))))
+
+(deftest patterns-feature-2
+  (testing "Stripe pattern constant in y and z but alternates in x"
+    (let [pattern (make-stripe-pattern white black)
+          y1 (stripe-at pattern (make-point 0 0 0))
+          y2 (stripe-at pattern (make-point 0 1 0))
+          y3 (stripe-at pattern (make-point 0 2 0))
+          z1 (stripe-at pattern (make-point 0 0 0))
+          z2 (stripe-at pattern (make-point 0 0 1))
+          z3 (stripe-at pattern (make-point 0 0 2))
+          x1 (stripe-at pattern (make-point 0 0 0))
+          x2 (stripe-at pattern (make-point 0.9 0 0))
+          x3 (stripe-at pattern (make-point 1 0 0))
+          x4 (stripe-at pattern (make-point -0.1 0 0))
+          x5 (stripe-at pattern (make-point -1 0 0))
+          x6 (stripe-at pattern (make-point -1.1 0 0))]
+      (is (c= y1 white))
+      (is (c= y2 white))
+      (is (c= y3 white))
+      (is (c= z1 white))
+      (is (c= z2 white))
+      (is (c= z3 white))
+      (is (c= x1 white))
+      (is (c= x2 white))
+      (is (c= x3 black))
+      (is (c= x4 black))
+      (is (c= x5 black))
+      (is (c= x6 white)))))
+
+(deftest material-pattern
+  (testing "Pattern addition to material"
+    (let [material (set-ambient (set-diffuse (set-specular (set-pattern (make-material) (make-stripe-pattern white black)) 0) 0) 1)
+          eyev (make-vector 0 0 -1)
+          normalv (make-vector 0 0 -1)
+          light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
+          c1 (lighting material light (make-point 0.9 0 0) eyev normalv false)
+          c2 (lighting material light (make-point 1.1 0 0) eyev normalv false)]
+      (is (c= c1 white))
+      (is (c= c2 black)))))
+
+(deftest pattern-transformation-1
+  (testing "Stripes with an object transformation"
+    (let [obj1 (make-sphere)
+          obj2 (set-transform obj1 (scaling 2 2 2))
+          pattern (make-stripe-pattern white black)
+          res (stripe-at-object pattern object point)]
+      (is (c= res white)))))
+
+(deftest pattern-transfomation-2
+  (testing "Stripes with pattern transformation"
+    (let [obj (make-sphere)
+          pattern (set-pattern-transform (make-stripe-pattern white black) (scaling 2 2 2))
+          res (stripe-at-object pattern obj (make-point 1.5 0 0))]
+      (is (c= white res)))))
+
+(deftest pattern-transfomation-3
+  (testing "Stripes with both object and pattern transformation"
+    (let [obj (set-transform (make-sphere) (scaling 2 2 2))
+          pattern (set-pattern-transform (make-stripe-pattern white black) (scaling 2 2 2))
+          res (stripe-at-object pattern obj (make-point 1.5 0 0))]
+      (is (c= white res)))))

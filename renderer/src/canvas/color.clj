@@ -63,3 +63,8 @@
            (>= % 1) 255
            (<= % 0) 0
            :else (Math/ceil (* % 255))) pixel))
+
+;; color constants
+
+(def black (make-color 0 0 0))
+(def white (make-color 1 1 1))

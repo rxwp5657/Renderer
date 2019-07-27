@@ -2,14 +2,14 @@
   (:use [la-math.vector]
         [canvas.color]))
 
-(defrecord Material [color ambient diffuse specular shininess])
+(defrecord Material [color ambient diffuse specular shininess pattern])
 
 (defn make-material
   "Make a material"
   ([]
-   (Material. (make-color 1 1 1) 0.1 0.9 0.9 200))
-  ([color ambient diffuse specular shininess]
-   (Material. color ambient diffuse specular shininess)))
+   (Material. (make-color 1 1 1) 0.1 0.9 0.9 200 nil))
+  ([color ambient diffuse specular shininess pattern]
+   (Material. color ambient diffuse specular shininess pattern)))
 
 (defn set-color
   "Change color value of material"
@@ -35,6 +35,11 @@
   "Change specular value of material"
   [material shininess]
   (assoc material :shininess shininess))
+
+(defn set-pattern
+  "Set pattern to material"
+  [material pattern]
+  (assoc material :pattern pattern))
 
 (defn mt=
  "Compare two materials"
