@@ -78,7 +78,7 @@
 (defn shade-hit
   "Get the color at the intersection encapsulated on the precomputations"
   [world comps]
-  (lighting (:material (:shape (:object comps))) (:light world) (:point comps) (:eyev comps) (:normalv comps) (shadowed? world (:over-point comps))))
+  (lighting (:material (:shape (:object comps))) (:object comps) (:light world) (:point comps) (:eyev comps) (:normalv comps) (shadowed? world (:over-point comps))))
 
 (defn color-at
   "Get the color on an intersection if there isn't an intersection, return black color"

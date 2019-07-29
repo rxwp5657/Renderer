@@ -2,7 +2,7 @@
   (:use [render.comp.data-structures]
         [la-math.vector]
         [la-math.matrix]
-        [render.patterns.stripe]
+        [render.patterns.pattern]
         [canvas.color]))
 
 (defn position
@@ -51,8 +51,8 @@
 
 (defn lighting
   "Phong Reflection model"
-  [material light point eyev normalv in-shadow?]
-  (let [color (if (nil? (:pattern material)) (:color material) (stripe-at (:pattern material) point))
+  [material object light point eyev normalv in-shadow?]
+  (let [color (if (nil? (:pattern material)) (:color material) (pattern-at-object (:pattern material) object point))
         effective-color (c*c color (:intensity light))
         lightv  (norm (v- (:position light) point))
         ambient (v* effective-color (:ambient material))

@@ -13,7 +13,11 @@
             [canvas.color :refer :all]
             [canvas.canvas :refer :all]
             [render.alg.scene :refer :all]
-            [render.patterns.stripe :refer :all]))
+            [render.patterns.pattern :refer :all]
+            [render.patterns.stripe  :refer :all]
+            [render.patterns.gradient :refer :all]
+            [render.patterns.ring :refer :all]
+            [render.patterns.checker :refer :all]))
 
 (deftest translation-test
   (testing "translation"
@@ -287,7 +291,7 @@
           eyev (make-vector 0 0 -1)
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv false)]
+          result (lighting m (make-sphere) light pos eyev normalv false)]
       (is (c= result (make-color 1.9000000000000001 1.9000000000000001 1.9000000000000001))))))
 
 (deftest light-test-2
@@ -297,7 +301,7 @@
           eyev (make-vector 0 (/ (Math/sqrt 2) 2) (* -1 (/ (Math/sqrt 2) 2)))
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv false)]
+          result (lighting m (make-sphere) light pos eyev normalv false)]
       (is (c= result (make-color 1.0 1.0 1.0))))))
 
 (deftest light-test-3
@@ -307,7 +311,7 @@
           eyev (make-vector 0 0 -1)
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 10 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv false)]
+          result (lighting m (make-sphere) light pos eyev normalv false)]
       (is (c= result (make-color 0.7363961030678927 0.7363961030678927 0.7363961030678927))))))
 
 (deftest light-test-4
@@ -317,7 +321,7 @@
           eyev (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (* -1 (/ (Math/sqrt 2) 2)))
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 10 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv false)]
+          result (lighting m (make-sphere) light pos eyev normalv false)]
       (is (c= result (make-color 1.6363961030678928 1.6363961030678928 1.6363961030678928))))))
 
 (deftest light-test-5
@@ -327,7 +331,7 @@
           eyev (make-vector 0 0 -1)
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 0 10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv false)]
+          result (lighting m (make-sphere) light pos eyev normalv false)]
       (is (c= result (make-color 0.1 0.1 0.1))))))
 
 (deftest light-test-6
@@ -337,7 +341,7 @@
           eyev (make-vector 0 0 -1)
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
-          result (lighting m light pos eyev normalv true)]
+          result (lighting m (make-sphere) light pos eyev normalv true)]
       (is (c= result (make-color 0.1 0.1 0.1))))))
 
 ;; Scene tests
@@ -578,8 +582,8 @@
 (deftest patterns-feature-1
   (testing "Pattern creation"
     (let [pattern (make-stripe-pattern white black)]
-      (is (c= white (:a pattern)))
-      (is (c= black (:b pattern))))))
+      (is (c= white (:a (:pattern pattern))))
+      (is (c= black (:b (:pattern pattern)))))))
 
 (deftest patterns-feature-2
   (testing "Stripe pattern constant in y and z but alternates in x"
@@ -615,8 +619,8 @@
           eyev (make-vector 0 0 -1)
           normalv (make-vector 0 0 -1)
           light (make-light-point (make-point 0 0 -10) (make-color 1 1 1))
-          c1 (lighting material light (make-point 0.9 0 0) eyev normalv false)
-          c2 (lighting material light (make-point 1.1 0 0) eyev normalv false)]
+          c1 (lighting material (make-sphere) light (make-point 0.9 0 0) eyev normalv false)
+          c2 (lighting material (make-sphere) light (make-point 1.1 0 0) eyev normalv false)]
       (is (c= c1 white))
       (is (c= c2 black)))))
 
@@ -625,19 +629,73 @@
     (let [obj1 (make-sphere)
           obj2 (set-transform obj1 (scaling 2 2 2))
           pattern (make-stripe-pattern white black)
-          res (stripe-at-object pattern object point)]
+          res (pattern-at-object pattern obj2 (make-point 1.5 0 0))]
       (is (c= res white)))))
 
 (deftest pattern-transfomation-2
   (testing "Stripes with pattern transformation"
     (let [obj (make-sphere)
           pattern (set-pattern-transform (make-stripe-pattern white black) (scaling 2 2 2))
-          res (stripe-at-object pattern obj (make-point 1.5 0 0))]
+          res (pattern-at-object pattern obj (make-point 1.5 0 0))]
       (is (c= white res)))))
 
 (deftest pattern-transfomation-3
   (testing "Stripes with both object and pattern transformation"
     (let [obj (set-transform (make-sphere) (scaling 2 2 2))
-          pattern (set-pattern-transform (make-stripe-pattern white black) (scaling 2 2 2))
-          res (stripe-at-object pattern obj (make-point 1.5 0 0))]
+          pattern (set-pattern-transform (make-stripe-pattern white black) (translation 0.5 0 0))
+          res (pattern-at-object pattern obj (make-point 2.5 0 0))]
       (is (c= white res)))))
+
+(deftest gradient-pattern-test
+  (testing "gradient creation"
+    (let [pattern (make-gradient white black)
+          r1 ((:pattern-at pattern) pattern (make-point 0 0 0))
+          r2 ((:pattern-at pattern) pattern (make-point 0.25 0 0))
+          r3 ((:pattern-at pattern) pattern (make-point 0.5 0 0))
+          r4 ((:pattern-at pattern) pattern (make-point 0.75 0 0))]
+      (is (c= r1 (make-color 1 1 1)))
+      (is (c= r2 (make-color 0.75 0.75 0.75)))
+      (is (c= r3 (make-color 0.5 0.5 0.5)))
+      (is (c= r4 (make-color 0.25 0.25 0.25))))))
+
+(deftest ring-pattern-test
+  (testing "ring creation"
+    (let [pattern (make-ring white black)
+          r1 ((:pattern-at pattern) pattern (make-point 0 0 0))
+          r2 ((:pattern-at pattern) pattern (make-point 1 0 0))
+          r3 ((:pattern-at pattern) pattern (make-point 0 0 1))
+          r4 ((:pattern-at pattern) pattern (make-point 0.708 0 0.708))]
+      (is (c= r1 white))
+      (is (c= r2 black))
+      (is (c= r3 black))
+      (is (c= r4 black)))))
+
+(deftest checker-pattern-test-x
+  (testing "checker creation"
+    (let [pattern (make-checker white black)
+          r1 ((:pattern-at pattern) pattern (make-point 0 0 0))
+          r2 ((:pattern-at pattern) pattern (make-point 0.99 0 0))
+          r3 ((:pattern-at pattern) pattern (make-point 1.01 0 0))]
+      (is (c= r1 white))
+      (is (c= r2 white))
+      (is (c= r3 black)))))
+
+(deftest checker-pattern-test-y
+  (testing "checker creation"
+    (let [pattern (make-checker white black)
+          r1 ((:pattern-at pattern) pattern (make-point 0 0 0))
+          r2 ((:pattern-at pattern) pattern (make-point 0 0.99 0))
+          r3 ((:pattern-at pattern) pattern (make-point 0 1.01 0))]
+      (is (c= r1 white))
+      (is (c= r2 white))
+      (is (c= r3 black)))))
+
+(deftest checker-pattern-test-z
+  (testing "checker creation"
+    (let [pattern (make-checker white black)
+          r1 ((:pattern-at pattern) pattern (make-point 0 0 0))
+          r2 ((:pattern-at pattern) pattern (make-point 0 0 0.99))
+          r3 ((:pattern-at pattern) pattern (make-point 0 0 1.01))]
+      (is (c= r1 white))
+      (is (c= r2 white))
+      (is (c= r3 black)))))
