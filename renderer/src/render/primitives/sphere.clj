@@ -40,3 +40,10 @@
   ^doubles
   [sphere point]
   (v- point (make-point  0 0 0)))
+
+(defn make-glass-sphere
+  "Make a glass sphere"
+  []
+  (let [sphere   (make-sphere)
+        material (set-transparency (set-refractive-index (make-material) 1.5) 1.0)]
+    (set-material sphere material)))

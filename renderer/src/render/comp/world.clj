@@ -34,3 +34,8 @@
   "Add light point to the world"
   [world light]
   (assoc world :light light))
+
+(defn add-shape
+  "Add a shape to the world"
+  [world shape]
+  (assoc world :objects (conj (:objects world) shape)))

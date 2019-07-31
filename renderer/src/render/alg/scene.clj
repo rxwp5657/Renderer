@@ -7,14 +7,16 @@
         [canvas.canvas]
         [render.alg.ray-tracer]))
 
+(declare reflected-color)
+
 ;; Helper data structure that encapsulates intersection data
 
-(defrecord Computations [t object point eyev normalv inside over-point])
+(defrecord Computations [t object point eyev normalv inside over-point under-point reflectv n1 n2])
 
 (defn make-computations
   "Return a computations data-structure"
-  [t object point eyev normalv inside over-point]
-  (Computations. t object point eyev normalv inside over-point))
+  [t object point eyev normalv inside over-point under-point reflectv n1 n2]
+  (Computations. t object point eyev normalv inside over-point under-point reflectv n1 n2))
 
 (defn- inside?
   "If ray is inside the object, return the negative of the normal and set inside to true"
@@ -23,17 +25,47 @@
     {:inside true  :normal (neg normalv)}
     {:inside false :normal normalv}))
 
+(defn- get-n
+  "Get n1 or n2 value"
+  [containers]
+  (if (empty? containers)
+    1.0
+   (:refractive-index (:material (:shape (last containers))))))
+
+(defn- update-container
+  "Update container whether or not it contains the object"
+  [containers intersection]
+  (if (some #(= (:object intersection) %) containers)
+    (remove #(= (:object intersection) %) containers)
+    (conj containers (:object intersection))))
+
+(defn get-ns
+  "Get refractive indices of the materials on either side of a ray-object intersection"
+  [intersections intersection]
+  (loop [i (first intersections)
+         r (rest  intersections)
+         containers []]
+    (if (= i intersection)
+      {:n1 (get-n containers) :n2 (get-n (update-container containers i))}
+      (recur (first r) (rest r) (update-container containers i)))))
+
+
 (defn prepare-computations
   "Precompute information related to the intersection"
-  [intersection ray]
-  (let [t (:t intersection)
-        object (:object intersection)
-        point  (position ray t)
-        eyev   (neg (:direction ray))
-        normal (normal-at object point)
-        inside (inside? normal eyev)
-        over-point (v+ point (v* (:normal inside) 0.00001))]
-    (make-computations t object point eyev (:normal inside) (:inside inside) over-point)))
+  ([intersection ray]
+   (prepare-computations intersection ray [intersection]))
+  ([intersection ray intersections]
+   (let [t (:t intersection)
+         object (:object intersection)
+         point  (position ray t)
+         eyev   (neg (:direction ray))
+         normal (normal-at object point)
+         inside (inside? normal eyev)
+         over-point  (v+ point (v* (:normal inside) 0.00001))
+         under-point (v- point (v* (:normal inside) 0.00001))
+         reflectv (reflect (:direction ray) (:normal inside))
+         n (get-ns intersections intersection)]
+     (make-computations t object point eyev (:normal inside) (:inside inside) over-point under-point reflectv (:n1 n) (:n2 n)))))
 
 ;; View transform matrix
 
@@ -77,17 +109,35 @@
 
 (defn shade-hit
   "Get the color at the intersection encapsulated on the precomputations"
-  [world comps]
-  (lighting (:material (:shape (:object comps))) (:object comps) (:light world) (:point comps) (:eyev comps) (:normalv comps) (shadowed? world (:over-point comps))))
+  [world comps remaining]
+  (let [surface   (lighting (:material (:shape (:object comps))) (:object comps) (:light world) (:point comps) (:eyev comps) (:normalv comps) (shadowed? world (:over-point comps)))
+        reflected (reflected-color world comps remaining)]
+    (c+ surface reflected)))
 
 (defn color-at
   "Get the color on an intersection if there isn't an intersection, return black color"
-  [world ray]
+  [world ray remaining]
   (let [intersections (intersect-world world ray)
         hit (hit intersections)]
     (if (nil? hit)
       (make-color 0 0 0)
-      (shade-hit world (prepare-computations hit ray)))))
+      (shade-hit world (prepare-computations hit ray intersections) remaining))))
+
+(defn reflected-color
+  "Compute reflection color"
+  [world comps remaining]
+  (if (or (= 0.0 (:reflective (:material (:shape (:object comps))))) (<= remaining 0))
+    black
+    (let [reflect-ray (make-ray (:over-point comps) (:reflectv comps))
+          color (color-at world reflect-ray (dec remaining))]
+      (c* color (:reflective (:material (:shape (:object comps))))))))
+
+(defn refracted-color
+  "Compute refracted color"
+  [world comps remaining]
+  (if (or (= 0.0 (:transparency (:material (:object comps)))) (= 0 remaining))
+    black
+    white))
 
 (defn ray-for-pixel
   "Create rays that can pass throught any given pixel on canvas"
@@ -109,7 +159,7 @@
     (pmap (fn
             [coordinate]
             (let [ray   (ray-for-pixel camera (:x coordinate) (:y coordinate))
-                  color (color-at world ray)]
+                  color (color-at world ray 5)]
               {:x (:x coordinate) :y (:y coordinate) :color color})) coordinates)))
 
 (defn render

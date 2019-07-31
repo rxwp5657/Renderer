@@ -269,7 +269,7 @@
 
 (deftest material-test
   (testing "material creation test"
-    (let [material (make-material (make-color 1 1 1) 0.1 0.9 0.9 200 nil)]
+    (let [material (make-material (make-color 1 1 1) 0.1 0.9 0.9 200 nil 0.0 0.0 1.0)]
       (is (c= (make-color 1 1 1) (:color material)))
       (is (= 0.1 (:ambient material)))
       (is (= 0.9 (:diffuse material)))
@@ -397,7 +397,7 @@
           shape (first (:objects world))
           intersection (make-intersection 4 shape)
           comps (prepare-computations intersection ray)
-          res (shade-hit world comps)]
+          res (shade-hit world comps 0)]
       (is (c= (make-color 0.38066119308103435 0.47582649135129296 0.28549589481077575) res)))))
 
 (deftest shading-intersection-2
@@ -408,21 +408,21 @@
           shape (last (:objects world))
           intersection (make-intersection 0.5 shape)
           comps (prepare-computations intersection ray)
-          res (shade-hit world comps)]
+          res (shade-hit world comps 0)]
       (is (c= (make-color 0.9049844720832575 0.9049844720832575 0.9049844720832575) res)))))
 
 (deftest world-feature-case-1
   (testing "The color when the ray misses"
     (let [world (make-default-world)
           ray   (make-ray (make-point 0 0 -5) (make-vector 0 1 0))
-          res   (color-at world ray)]
+          res   (color-at world ray 0)]
       (is (c= (make-color 0 0 0) res)))))
 
 (deftest world-feature-case-2
   (testing "The color when the ray hits"
     (let [world (make-default-world)
           ray   (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
-          res   (color-at world ray)]
+          res   (color-at world ray 0)]
       (is (c= (make-color 0.38066119308103435 0.47582649135129296 0.28549589481077575) res)))))
 
 (deftest world-feature-case-3
@@ -431,7 +431,7 @@
           w2 (change-object w1 0 (set-material (first (:objects w1)) (set-ambient (:material (:shape (first (:objects w1)))) 1)))
           w3 (change-object w2 1 (set-material (last (:objects w2))  (set-ambient (:material (:shape (last  (:objects w2)))) 1)))
           ray   (make-ray (make-point 0 0 0.75) (make-vector 0 0 -1))
-          res   (color-at w3 ray)]
+          res   (color-at w3 ray 0)]
       (is (c= (:color (:material (:shape (last (:objects w3))))) res)))))
 
 (deftest view-transform-1
@@ -534,7 +534,7 @@
           r  (make-ray (make-point 0 0 5) (make-vector 0 0 1))
           i  (make-intersection 4 s2)
           comps (prepare-computations i r)
-          res (shade-hit w comps)]
+          res (shade-hit w comps 0)]
       (is (c= (make-color 0.1 0.1 0.1) res)))))
 
 (deftest shadow-surface-correction
@@ -698,4 +698,138 @@
           r3 ((:pattern-at pattern) pattern (make-point 0 0 1.01))]
       (is (c= r1 white))
       (is (c= r2 white))
-      (is (c= r3 black)))))
+      (is (c= r3 black))))
+
+;; Reflection and Refraction
+
+ (deftest material-reflectivity
+   (testing "material reflection field"
+     (let [material (make-material)]
+       (is (= 0.0 (:reflective material)))))))
+
+(deftest precompute-reflectv
+  (testing "Prepare computations reflective vector"
+    (let [shape (make-plane)
+          ray   (make-ray (make-point 0 1 -1) (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (/ (Math/sqrt 2) 2)))
+          intersection (make-intersection (Math/sqrt 2) shape)
+          comps (prepare-computations intersection ray)]
+      (is (v= (make-vector 0 (/ (Math/sqrt 2) 2) (/ (Math/sqrt 2) 2)) (:reflectv comps))))))
+
+(deftest strike-nonreflective-surface
+  (testing "Test the strike of an none reflective surface"
+    (let [world (make-default-world)
+          ray   (make-ray (make-point 0 0 0) (make-vector 0 0 1))
+          shape (set-material (last (:objects world)) (set-ambient (:material (:shape (last (:objects world)))) 1))
+          intersection (make-intersection 1 shape)
+          comps (prepare-computations intersection ray)
+          res   (reflected-color world comps)]
+      (is (c= black res)))))
+
+(deftest strike-nonreflective-surface
+  (testing "Test the strike of an reflective surface"
+    (let [plane (make-plane)
+          shape1 (set-material  plane  (set-reflectiveness (:material (:shape plane)) 0.5))
+          shape2 (set-transform shape1 (translation 0 -1 0))
+          w (add-shape (make-default-world) shape2)
+          ray (make-ray (make-point 0 0 -3) (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (/ (Math/sqrt 2) 2)))
+          i (make-intersection (Math/sqrt 2) shape2)
+          comps (prepare-computations i ray)
+          color (reflected-color w comps 1)]
+      (is (c= (make-color 0.1903323203795347 0.23791540047441834 0.142749240284651) color)))))
+
+(deftest new-shade-hit
+  (testing "Test the strike of an reflective surface"
+    (let [plane (make-plane)
+          shape1 (set-material  plane  (set-reflectiveness (:material (:shape plane)) 0.5))
+          shape2 (set-transform shape1 (translation 0 -1 0))
+          w (add-shape (make-default-world) shape2)
+          ray (make-ray (make-point 0 0 -3) (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (/ (Math/sqrt 2) 2)))
+          i (make-intersection (Math/sqrt 2) shape2)
+          comps (prepare-computations i ray)
+          color (shade-hit w comps 1)]
+      (is (c= (make-color 0.8767577093610361 0.9243407894559197 0.8291746292661524) color)))))
+
+(deftest avoid-infinite-recursion
+  (testing "Color-at with mutually reflective surfaces"
+    (let [plane (make-plane)
+          lower (set-transform (set-material plane (set-reflectiveness (:material (:shape plane)) 1)) (translation 0 -1 0))
+          upper (set-transform (set-material plane (set-reflectiveness (:material (:shape plane)) 1)) (translation 0 1 0))
+          w (make-world (make-light-point (make-point 0 0 0) (make-color 1 1 1)) lower upper)
+          ray (make-ray (make-point 0 0 0) (make-vector 0 1 0))
+          res (color-at w ray 0)]
+      (is (c= (make-color 1.9000000000000001 1.9000000000000001 1.9000000000000001) res)))))
+
+(deftest material-refraction-test
+  (testing "Material refractive index"
+    (let [material (make-material)]
+      (is (= 0.0 (:transparency material)))
+      (is (= 1.0 (:refractive-index material))))))
+
+(deftest glass-sphere-test
+  (testing "Making a sphere with a glassy material"
+    (let [sphere (make-glass-sphere)]
+      (is (m= (identity-m) (:transform (:shape sphere))))
+      (is (= 1.0 (:transparency (:material (:shape sphere)))))
+      (is (= 1.5 (:refractive-index (:material (:shape sphere))))))))
+
+(deftest prepare-computations-n1-n2
+  (testing "Calculating n1 and n2"
+    (let [sa  (set-transform (make-glass-sphere) (scaling 2 2 2))
+          sb  (set-transform (set-material (make-glass-sphere) (set-refractive-index (make-material) 2.0)) (translation 0 0 -0.25))
+          sc  (set-transform (set-material (make-glass-sphere) (set-refractive-index (make-material) 2.5)) (translation 0 0 0.25))
+          ray (make-ray (make-point 0 0 -4) (make-vector 0 0 1))
+          xs1 (make-intersection 2 sa)
+          xs2 (make-intersection 2.75 sb)
+          xs3 (make-intersection 3.25 sc)
+          xs4 (make-intersection 4.75 sb)
+          xs5 (make-intersection 5.25 sc)
+          xs6 (make-intersection 6 sa)
+          xs  (make-intersections xs1 xs2 xs3 xs4 xs5 xs6)
+          comps1 (prepare-computations xs1 ray xs)
+          comps2 (prepare-computations xs2 ray xs)
+          comps3 (prepare-computations xs3 ray xs)
+          comps4 (prepare-computations xs4 ray xs)
+          comps5 (prepare-computations xs5 ray xs)
+          comps6 (prepare-computations xs6 ray xs)]
+      (is (= 1.0 (:n1 comps1)))
+      (is (= 1.5 (:n2 comps1)))
+      (is (= 1.5 (:n1 comps2)))
+      (is (= 2.0 (:n2 comps2)))
+      (is (= 2.0 (:n1 comps3)))
+      (is (= 2.5 (:n2 comps3)))
+      (is (= 2.5 (:n1 comps4)))
+      (is (= 2.5 (:n2 comps4)))
+      (is (= 2.5 (:n1 comps5)))
+      (is (= 1.5 (:n2 comps5)))
+      (is (= 1.5 (:n1 comps6)))
+      (is (= 1.0 (:n2 comps6))))))
+
+(deftest under-point-test
+  (testing "Compute under-point"
+    (let [r (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          shape (set-transform (make-glass-sphere) (translation 0 0 1))
+          i  (make-intersection 5 shape)
+          xs (make-intersections i)
+          comps (prepare-computations i r xs)]
+      (is (> (z (:under-point comps)) (/ 0.00001 2)))
+      (is (< (z (:point comps)) (z (:under-point comps)))))))
+
+(deftest refracted-color-opaque-object
+  (testing "The reflacted color with an opaque surface"
+    (let [w     (make-default-world)
+          shape (first (:objects w))
+          r  (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          xs (make-intersections (make-intersection 4 shape) (make-intersection 6 shape))
+          comps (prepare-computations (first xs) r xs)
+          c (refracted-color w comps 5)]
+      (c= black c))))
+
+(deftest refracted-color-opaque-object-2
+  (testing "The reflacted color with an opaque surface"
+    (let [w     (make-default-world)
+          shape (set-material (first (:objects w)) (make-material (make-color 1 1 1) 0.1 0.9 0.9 200 nil 0.0 1.0 1.5))
+          r  (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          xs (make-intersections (make-intersection 4 shape) (make-intersection 6 shape))
+          comps (prepare-computations (first xs) r xs)
+          c (refracted-color w comps 0)]
+      (c= black c))))
