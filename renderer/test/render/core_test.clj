@@ -737,17 +737,6 @@
           color (reflected-color w comps 1)]
       (is (c= (make-color 0.1903323203795347 0.23791540047441834 0.142749240284651) color)))))
 
-(deftest new-shade-hit
-  (testing "Test the strike of an reflective surface"
-    (let [plane (make-plane)
-          shape1 (set-material  plane  (set-reflectiveness (:material (:shape plane)) 0.5))
-          shape2 (set-transform shape1 (translation 0 -1 0))
-          w (add-shape (make-default-world) shape2)
-          ray (make-ray (make-point 0 0 -3) (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (/ (Math/sqrt 2) 2)))
-          i (make-intersection (Math/sqrt 2) shape2)
-          comps (prepare-computations i ray)
-          color (shade-hit w comps 1)]
-      (is (c= (make-color 0.8767577093610361 0.9243407894559197 0.8291746292661524) color)))))
 
 (deftest avoid-infinite-recursion
   (testing "Color-at with mutually reflective surfaces"
@@ -833,3 +822,79 @@
           comps (prepare-computations (first xs) r xs)
           c (refracted-color w comps 0)]
       (c= black c))))
+
+(deftest refracted-color-3
+  (testing "refracted color under total internal reflection"
+    (let [w (make-default-world)
+          shape (set-material (first (:objects w)) (make-material (make-color 1 1 1) 0.1 0.9 0.9 200 nil 0.0 1.0 1.5))
+          r  (make-ray (make-point 0 0 (/ (Math/sqrt 2) 2)) (make-vector 0 1 0))
+          xs (make-intersections (make-intersection (* -1 (/ (Math/sqrt 2) 2)) shape) (make-intersection (/ (Math/sqrt 2) 2) shape))
+          comps (prepare-computations (last xs) r xs)
+          c (refracted-color w comps 5)]
+      (is (c= c black)))))
+
+(deftest refracted-color-4
+  (testing "Spawn a ray inside the innermost sphere"
+    (let [w  (make-default-world)
+          sa (set-material (first (:objects w)) (make-material (make-color 1 1 1) 1.0 0.9 0.9 200 (make-pattern white black) 0.0 1.0 1.5))
+          sb (set-material (last  (:objects w)) (make-material (make-color 1 1 1) 0.1 0.9 0.9 200 nil 0.0 1.0 1.5))
+          r  (make-ray (make-point 0 0 0.1) (make-vector 0 1 0))
+          xs (make-intersections (make-intersection -0.9899 sa) (make-intersection -0.4899 sb) (make-intersection 0.4899 sb) (make-intersection 0.9899 sa))
+          comps (prepare-computations (get xs 2) r xs)
+          c (refracted-color w comps 5)]
+      (is (c= c (make-color 0.08000000000000002 0.1 0.06))))))
+
+(deftest shading-test-transparent
+  (testing "Shade hit with a transparent material"
+    (let [plane  (set-material (make-plane) (make-material (make-color 1 1 1) 0.1 0.9 0.9 200 nil 0.0 0.5 1.5))
+          floor  (set-transform plane (translation 0 -1 0))
+          sphere (set-material (make-sphere) (make-material (make-color 1 0 0) 0.5 0.9 0.9 200 nil 0.0 0.0 1.0))
+          ball   (set-transform sphere (translation 0 -3.5 -0.5))
+          w  (add-shape (add-shape (make-default-world) floor) ball)
+          r  (make-ray (make-point 0 0 -3) (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (/ (Math/sqrt 2) 2)))
+          xs (make-intersections (make-intersection (Math/sqrt 2) floor))
+          comps (prepare-computations (first xs) r xs)
+          color (shade-hit w comps 5)]
+      (is (c= color (make-color 0.9364253889815014 0.6864253889815014 0.6864253889815014))))))
+
+(deftest schlick-test-1
+  (testing "Schlick reflectance under total internal reflection"
+    (let [shape (make-glass-sphere)
+          r     (make-ray (make-point 0 0 (Math/sqrt 2)) (make-vector 0 1 0))
+          xs    (make-intersections (make-intersection (* -1 (/ (Math/sqrt 2) 2)) shape)
+                                    (make-intersection (Math/sqrt 2) shape))
+          comps (prepare-computations (last xs) r xs)
+          reflectance (schlick comps)]
+      (is (= 1.0 reflectance)))))
+
+(deftest schlick-test-2
+  (testing "Schlick reflectance of a perpendicular ray"
+    (let [shape (make-glass-sphere)
+          r     (make-ray (make-point 0 0 0) (make-vector 0 1 0))
+          xs    (make-intersections (make-intersection -1 shape)
+                                    (make-intersection  1 shape))
+          comps (prepare-computations (last xs) r xs)
+          reflectance (schlick comps)]
+      (is (= 0.04000000000000001 reflectance)))))
+
+(deftest schlick-test-3
+  (testing "Schlick aproximation with small angle"
+    (let [shape (make-glass-sphere)
+          r     (make-ray (make-point 0 0.99 -2) (make-vector 0 0 1))
+          xs    (make-intersections (make-intersection 1.8589 shape))
+          comps (prepare-computations (first xs) r xs)
+          reflectance (schlick comps)]
+      (is (= 0.48873081012212183 reflectance)))))
+
+(deftest shading-test-reflective
+  (testing "Shade hit with a reflective, transparent material"
+    (let [plane  (set-material (make-plane) (make-material (make-color 1 1 1) 0.1 0.9 0.9 200 nil 0.5 0.5 1.5))
+          floor  (set-transform plane (translation 0 -1 0))
+          sphere (set-material (make-sphere) (make-material (make-color 1 0 0) 0.5 0.9 0.9 200 nil 0.0 0.0 1.0))
+          ball   (set-transform sphere (translation 0 -3.5 -0.5))
+          w  (add-shape (add-shape (make-default-world) floor) ball)
+          r  (make-ray (make-point 0 0 -3) (make-vector 0 (* -1 (/ (Math/sqrt 2) 2)) (/ (Math/sqrt 2) 2)))
+          xs (make-intersections (make-intersection (Math/sqrt 2) floor))
+          comps (prepare-computations (first xs) r xs)
+          color (shade-hit w comps 5)]
+      (is (c= color (make-color 0.9339152130708506 0.6964343169445542  0.692430745759333))))))

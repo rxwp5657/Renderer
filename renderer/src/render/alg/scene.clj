@@ -7,7 +7,7 @@
         [canvas.canvas]
         [render.alg.ray-tracer]))
 
-(declare reflected-color)
+(declare reflected-color refracted-color)
 
 ;; Helper data structure that encapsulates intersection data
 
@@ -107,12 +107,36 @@
       true
       false)))
 
+(defn- schlick-result
+  "Compute schlick result"
+  [comps cos]
+  (let [ro (Math/pow (/ (- (:n1 comps) (:n2 comps)) (+ (:n1 comps) (:n2 comps))) 2)]
+    (+ ro (* (- 1 ro) (Math/pow (- 1 cos) 5)))))
+
+(defn schlick
+  "Schlick aproximation of Fresnel equation"
+  [comps]
+  (let [cos (dot (:eyev comps) (:normalv comps))]
+    (if (> (:n1 comps) (:n2 comps))
+      (let [n (/ (:n1 comps) (:n2 comps))
+            sin2-t (* (Math/pow n 2) (- 1 (Math/pow cos 2)))]
+        (if (> sin2-t 1.0)
+          1.0
+          (schlick-result comps (Math/sqrt (- 1 sin2-t)))))
+      (schlick-result comps cos))))
+
 (defn shade-hit
   "Get the color at the intersection encapsulated on the precomputations"
   [world comps remaining]
   (let [surface   (lighting (:material (:shape (:object comps))) (:object comps) (:light world) (:point comps) (:eyev comps) (:normalv comps) (shadowed? world (:over-point comps)))
-        reflected (reflected-color world comps remaining)]
-    (c+ surface reflected)))
+        reflected (reflected-color world comps remaining)
+        refracted (refracted-color world comps remaining)
+        material  (:material (:shape (:object comps)))]
+    (if (and (> (:reflective material)  0)
+             (> (:transparency material 0)))
+      (let [reflectance (schlick comps)]
+        (c+ surface (c+ (c* reflected reflectance) (c* refracted (- 1 reflectance)))))
+      (c+ refracted (c+ surface reflected)))))
 
 (defn color-at
   "Get the color on an intersection if there isn't an intersection, return black color"
@@ -135,9 +159,19 @@
 (defn refracted-color
   "Compute refracted color"
   [world comps remaining]
-  (if (or (= 0.0 (:transparency (:material (:object comps)))) (= 0 remaining))
-    black
-    white))
+  (let [n-ratio (/ (:n1 comps) (:n2 comps))
+        cos-i   (dot (:eyev comps) (:normalv comps))
+        sin2-t  (* (Math/pow n-ratio 2) (- 1 (Math/pow cos-i 2)))
+        cos-t   (Math/sqrt (- 1 sin2-t))
+        direction (v- (v* (:normalv comps) (- (* n-ratio cos-i) cos-t))
+                      (v* (:eyev comps) n-ratio))
+        refract-ray (make-ray (:under-point comps) direction)
+        color (v* (color-at world refract-ray (dec remaining)) (:transparency (:material (:shape (:object comps)))))]
+    (cond
+      (= 0 remaining) black
+      (= 0.0 (:transparency (:material (:object comps)))) black
+      (> sin2-t 1) black
+      :else color)))
 
 (defn ray-for-pixel
   "Create rays that can pass throught any given pixel on canvas"
