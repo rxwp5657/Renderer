@@ -49,4 +49,4 @@
 
 (defn -main
   [& args]
-  (save-canvas (render camera world) "scene-cube"))
+  (save-canvas (render camera world) "scene-reflection"))
