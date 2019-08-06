@@ -6,7 +6,10 @@
             [render.comp.data-structures   :refer :all]
             [render.primitives.shape  :refer :all]
             [render.primitives.sphere :refer :all]
+            [render.primitives.cube   :refer :all]
+            [render.primitives.cylinder :refer :all]
             [render.primitives.plane :refer :all]
+            [render.primitives.cone :refer :all]
             [render.comp.camera :refer :all]
             [render.comp.world :refer :all]
             [render.core  :refer :all]
@@ -898,3 +901,248 @@
           comps (prepare-computations (first xs) r xs)
           color (shade-hit w comps 5)]
       (is (c= color (make-color 0.9339152130708506 0.6964343169445542  0.692430745759333))))))
+
+;; Cube
+
+(deftest cube-feature-1
+  (testing "A ray intersects a cube "
+    (let [c  (make-cube)
+          r1 (make-ray (make-point 5 0.5  0) (make-vector -1 0 0))
+          r2 (make-ray (make-point -5 0.5 0) (make-vector 1 0 0))
+          r3 (make-ray (make-point 0.5 5  0) (make-vector  0 -1 0))
+          r4 (make-ray (make-point 0.5 -5 0) (make-vector  0 1 0))
+          r5 (make-ray (make-point 0.5 0  5) (make-vector  0 0 -1))
+          r6 (make-ray (make-point 0.5 0 -5) (make-vector  0 0 1))
+          inside (make-ray (make-point 0 0.5 0) (make-vector  0 0 1))
+          xs1 ((:local-intersect c) c r1)
+          xs2 ((:local-intersect c) c r2)
+          xs3 ((:local-intersect c) c r3)
+          xs4 ((:local-intersect c) c r4)
+          xs5 ((:local-intersect c) c r5)
+          xs6 ((:local-intersect c) c r6)
+          xs7 ((:local-intersect c) c inside)]
+      (is (= 4.0 (:t (first xs1))))
+      (is (= 6.0 (:t (last  xs1))))
+      (is (= 4.0 (:t (first xs2))))
+      (is (= 6.0 (:t (last  xs2))))
+      (is (= 4.0 (:t (first xs3))))
+      (is (= 6.0 (:t (last  xs3))))
+      (is (= 4.0 (:t (first xs4))))
+      (is (= 6.0 (:t (last  xs4))))
+      (is (= 4.0 (:t (first xs5))))
+      (is (= 6.0 (:t (last  xs5))))
+      (is (= 4.0 (:t (first xs6))))
+      (is (= 6.0 (:t (last  xs6))))
+      (is (= -1.0 (:t (first xs7))))
+      (is (=  1.0 (:t (last  xs7)))))))
+
+(deftest cube-feature-2
+  (testing "A ray doesn`t intersect a cube"
+    (let [c  (make-cube)
+          r1 (make-ray (make-point -2 0 0) (make-vector 0.2673 0.5345 0.8018))
+          r2 (make-ray (make-point 0 -2 0) (make-vector 0.8018 0.2673 0.5345))
+          r3 (make-ray (make-point 0 0 -2) (make-vector 0.5345 0.8018 0.2673))
+          r4 (make-ray (make-point 2 0 2) (make-vector 0 0 -1))
+          r5 (make-ray (make-point 0 2 2) (make-vector 0 -1 0))
+          r6 (make-ray (make-point 2 2 0) (make-vector -1 0 0))
+          xs1 ((:local-intersect c) c r1)
+          xs2 ((:local-intersect c) c r2)
+          xs3 ((:local-intersect c) c r3)
+          xs4 ((:local-intersect c) c r4)
+          xs5 ((:local-intersect c) c r5)
+          xs6 ((:local-intersect c) c r6)]
+      (is (empty? xs1))
+      (is (empty? xs2))
+      (is (empty? xs3))
+      (is (empty? xs4))
+      (is (empty? xs5))
+      (is (empty? xs6)))))
+
+(deftest cube-feature-3
+  (testing "Normal of the face of a cube"
+    (let [c  (make-cube)
+          p1 (make-point 1 0.5 -0.8)
+          p2 (make-point -1 -0.2 0.9)
+          p3 (make-point -0.4 1 -0.1)
+          p4 (make-point 0.3 -1 -0.7)
+          p5 (make-point -0.6 0.3 1)
+          p6 (make-point 0.4 0.4 -1)
+          p7 (make-point 1 1 1)
+          p8 (make-point -1 -1 -1)
+          r1 ((:local-normal-at c) c p1)
+          r2 ((:local-normal-at c) c p2)
+          r3 ((:local-normal-at c) c p3)
+          r4 ((:local-normal-at c) c p4)
+          r5 ((:local-normal-at c) c p5)
+          r6 ((:local-normal-at c) c p6)
+          r7 ((:local-normal-at c) c p7)
+          r8 ((:local-normal-at c) c p8)]
+      (is (v= r1 (make-vector  1 0 0)))
+      (is (v= r2 (make-vector -1 0 0)))
+      (is (v= r3 (make-vector  0 1 0)))
+      (is (v= r4 (make-vector  0 -1 0)))
+      (is (v= r5 (make-vector  0 0 1)))
+      (is (v= r6 (make-vector  0 0 -1)))
+      (is (v= r7 (make-vector  1 0 0)))
+      (is (v= r8 (make-vector -1 0 0))))))
+
+;; Cylinder
+
+(deftest cylinder-feature-1
+  (testing "Ray misses cylinder"
+    (let [cyl (make-cylinder)
+          dir1 (norm (make-vector 0 1 0))
+          dir2 (norm (make-vector 0 1 0))
+          dir3 (norm (make-vector 0 0 0))
+          r1 (make-ray (make-point 1 0 0) dir1)
+          r2 (make-ray (make-point 0 0 0) dir2)
+          r3 (make-ray (make-point 0 0 -5) dir3)
+          xs1 ((:local-intersect cyl) cyl r1)
+          xs2 ((:local-intersect cyl) cyl r2)
+          xs3 ((:local-intersect cyl) cyl r3)]
+      (is (empty? xs1))
+      (is (empty? xs2))
+      (is (empty? xs3)))))
+
+(deftest cylinder-feature-2
+  (testing "Ray - cylinder intersection"
+    (let [cyl  (make-cylinder 1 2 false)
+          dir1 (norm (make-vector 0.1 1 0))
+          dir2 (norm (make-vector 0 0 1))
+          r1 (make-ray (make-point 0 1.5 0) dir1)
+          r2 (make-ray (make-point 0 3 -5) dir2)
+          r3 (make-ray (make-point 0 0 -5) dir2)
+          r4 (make-ray (make-point 0 2 -5) dir2)
+          r5 (make-ray (make-point 0 1 -5) dir2)
+          r6 (make-ray (make-point 0 1.5 -2) dir2)
+          xs1 ((:local-intersect cyl) cyl r1)
+          xs2 ((:local-intersect cyl) cyl r2)
+          xs3 ((:local-intersect cyl) cyl r3)
+          xs4 ((:local-intersect cyl) cyl r4)
+          xs5 ((:local-intersect cyl) cyl r5)
+          xs6 ((:local-intersect cyl) cyl r6)]
+      (is (= 0 (count xs1)))
+      (is (= 0 (count xs2)))
+      (is (= 0 (count xs3)))
+      (is (= 0 (count xs4)))
+      (is (= 0 (count xs5)))
+      (is (= 2 (count xs6))))))
+
+(deftest cylinder-feature-3
+  (testing "Intersecting the caps of a closed cylinder"
+    (let [cyl  (make-cylinder 1 2 true)
+          dir1 (norm (make-vector 0 -1 0))
+          dir2 (norm (make-vector 0 -1 2))
+          dir3 (norm (make-vector 0 -1 1))
+          dir4 (norm (make-vector 0 1 2))
+          dir5 (norm (make-vector 0 1 1))
+          r1 (make-ray (make-point 0 3 0)   dir1)
+          r2 (make-ray (make-point 0 3 -2)  dir2)
+          r3 (make-ray (make-point 0 4 -2)  dir3)
+          r4 (make-ray (make-point 0 0 -2)  dir4)
+          r5 (make-ray (make-point 0 -1 -2) dir5)
+          xs1 ((:local-intersect cyl) cyl r1)
+          xs2 ((:local-intersect cyl) cyl r2)
+          xs3 ((:local-intersect cyl) cyl r3)
+          xs4 ((:local-intersect cyl) cyl r4)
+          xs5 ((:local-intersect cyl) cyl r5)]
+      (is (= 2 (count xs1)))
+      (is (= 2 (count xs2)))
+      (is (= 2 (count xs3)))
+      (is (= 2 (count xs4)))
+      (is (= 2 (count xs5))))))
+
+(deftest cylinder-feature-4
+  (testing "Intersecting a cylinder 2"
+    (let [cyl  (make-cylinder)
+          dir1 (norm (make-vector 0 0 1))
+          dir2 (norm (make-vector 0 0 1))
+          dir3 (norm (make-vector 0.1 1 1))
+          r1 (make-ray (make-point 1 0 -5)   dir1)
+          r2 (make-ray (make-point 0 0 -5)   dir2)
+          r3 (make-ray (make-point 0.5 0 -5) dir3)
+          xs1 ((:local-intersect cyl) cyl r1)
+          xs2 ((:local-intersect cyl) cyl r2)
+          xs3 ((:local-intersect cyl) cyl r3)]
+      (is (= 5.0 (:t (first xs1))))
+      (is (= 5.0 (:t (last  xs1))))
+      (is (= 4.0 (:t (first xs2))))
+      (is (= 6.0 (:t (last  xs2))))
+      (is (= 6.80798191702732  (:t (first xs3))))
+      (is (= 7.088723439378861 (:t (last  xs3)))))))
+
+(deftest cube-feature-5
+  (testing "Normal of a capped cube"
+    (let [c  (make-cylinder 1 2 true)
+          p1 (make-point 0 1 0)
+          p2 (make-point 0.5 1 0)
+          p3 (make-point 0 1 0.5)
+          p4 (make-point 0 2 0)
+          p5 (make-point 0.5 2 0)
+          p6 (make-point 0 2 0.5)
+          r1 ((:local-normal-at c) c p1)
+          r2 ((:local-normal-at c) c p2)
+          r3 ((:local-normal-at c) c p3)
+          r4 ((:local-normal-at c) c p4)
+          r5 ((:local-normal-at c) c p5)
+          r6 ((:local-normal-at c) c p6)]
+      (is (v= r1 (make-vector  0 -1 0)))
+      (is (v= r2 (make-vector  0 -1 0)))
+      (is (v= r3 (make-vector  0 -1 0)))
+      (is (v= r4 (make-vector  0 1 0)))
+      (is (v= r5 (make-vector  0 1 0)))
+      (is (v= r6 (make-vector  0 1 0))))))
+
+;; Cone
+
+(deftest cone-feature-1
+  (testing "Cone - ray intersection"
+    (let [cone (make-cone)
+          dir1 (norm (make-vector 0 0 1))
+          dir2 (norm (make-vector 1 1 1))
+          dir3 (norm (make-vector -0.5 -1 1))
+          dir4 (norm (make-vector 0 1 1))
+          r1 (make-ray (make-point 0 0 -5) dir1)
+          r2 (make-ray (make-point 0 0 -5) dir2)
+          r3 (make-ray (make-point 1 1 -5) dir3)
+          r4 (make-ray (make-point 0 0 -1) dir4)
+          xs1 ((:local-intersect cone) cone r1)
+          xs2 ((:local-intersect cone) cone r2)
+          xs3 ((:local-intersect cone) cone r3)
+          xs4 ((:local-intersect cone) cone r4)]
+      (is (= 5.0 (:t (first xs1))))
+      (is (= 5.0 (:t (last xs1))))
+      (is (= 8.660254037844386 (:t (first xs2))))
+      (is (= 8.660254037844386 (:t (last  xs2))))
+      (is (= 4.550055679356354 (:t (first xs3))))
+      (is (= 49.44994432064364 (:t (last  xs3))))
+      (is (= 0.3535533905932738 (:t (first xs4)))))))
+
+(deftest cone-feature-2
+  (testing "Capped cone - ray intersection"
+    (let [cone (make-cone -0.5 0.5 true)
+          dr1  (norm (make-vector 0 1 0))
+          dr2  (norm (make-vector 0 1 1))
+          dr3  (norm (make-vector 0 1 0))
+          r1 (make-ray (make-point 0 0 -5) dr1)
+          r2 (make-ray (make-point 0 0 -0.25) dr2)
+          r3 (make-ray (make-point 0 0 -0.25) dr3)
+          xs1 ((:local-intersect cone) cone r1)
+          xs2 ((:local-intersect cone) cone r2)
+          xs3 ((:local-intersect cone) cone r3)]
+      (is (= 0 (count xs1)))
+      (is (= 2 (count xs2)))
+      (is (= 4 (count xs3))))))
+
+(deftest cone-feature-3
+  (testing "Computing normal vector cone"
+    (let [cone (make-cone)
+          p1 (make-point 0 0 0)
+          p2 (make-point 1 1 1)
+          p3 (make-point -1 -1 0)
+          r1 ((:local-normal-at cone) cone p1)
+          r2 ((:local-normal-at cone) cone p2)
+          r3 ((:local-normal-at cone) cone p3)]
+      (is (v= (make-vector 0 0 0)  r1))
+      (is (v= (make-vector 1 -1.4142135623730951 1)  r2))
+      (is (v= (make-vector -1 1 0) r3)))))
