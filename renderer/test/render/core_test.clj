@@ -20,7 +20,9 @@
             [render.patterns.stripe  :refer :all]
             [render.patterns.gradient :refer :all]
             [render.patterns.ring :refer :all]
-            [render.patterns.checker :refer :all]))
+            [render.patterns.checker :refer :all])
+  (:import comp.BidirectionalTree))
+
 
 (deftest translation-test
   (testing "translation"
@@ -1146,3 +1148,13 @@
       (is (v= (make-vector 0 0 0)  r1))
       (is (v= (make-vector 1 -1.4142135623730951 1)  r2))
       (is (v= (make-vector -1 1 0) r3)))))
+
+;; BidirectionalTree
+
+(deftest BidirectionalTree-feature-1
+  (testing  "Tree creation"
+    (let [tree (BidirectionalTree. 5)
+          val  (.val tree)
+          new-val (set! (.val tree) 6)]
+      (is (= 5 val))
+      (is (= 6 (.val tree))))))

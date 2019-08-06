@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [uncomplicate/fluokitten "0.9.1"]]
-  :java-source-paths ["src/render/comp/tree"]
+  :java-source-paths ["src/java"]
   :main ^:skip-aot render.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
