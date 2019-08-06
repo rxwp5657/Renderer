@@ -10,6 +10,7 @@
             [render.primitives.cylinder :refer :all]
             [render.primitives.plane :refer :all]
             [render.primitives.cone :refer :all]
+            [render.primitives.group :refer :all]
             [render.comp.camera :refer :all]
             [render.comp.world :refer :all]
             [render.core  :refer :all]
@@ -1149,12 +1150,11 @@
       (is (v= (make-vector 1 -1.4142135623730951 1)  r2))
       (is (v= (make-vector -1 1 0) r3)))))
 
-;; BidirectionalTree
+;; Group
 
-(deftest BidirectionalTree-feature-1
-  (testing  "Tree creation"
-    (let [tree (BidirectionalTree. 5)
-          val  (.val tree)
-          new-val (set! (.val tree) 6)]
-      (is (= 5 val))
-      (is (= 6 (.val tree))))))
+(deftest group-feature-1
+  (testing "Creating a group"
+    (let [g  (make-group)
+          g2 (make-group (identity-m) (make-sphere) (make-plane))]
+      (is (m= (:transform g) (identity-m)))
+      (is (empty? (:shapes g))))))
