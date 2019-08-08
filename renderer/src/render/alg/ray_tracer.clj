@@ -3,6 +3,7 @@
         [la-math.vector]
         [la-math.matrix]
         [render.patterns.pattern]
+        [render.primitives.shape]
         [canvas.color]))
 
 (defn position
@@ -33,15 +34,37 @@
       (not (nil? val)) (recur (first r) (rest r))
       :else nil)))
 
+(defn world-to-object
+  "Transform a point from world space to object space"
+  [shape point]
+  (let [pn (if (parent? shape)
+             (world-to-object (:parent (:shape shape)) point)
+             point)]
+    (m*v (inverse (:transform (:shape shape))) pn)))
+
+(defn normal-to-world
+  "Transform the normal of an object to world space"
+  [shape normal]
+  (let [nl  (m*v (transpose (inverse (:transform (:shape shape)))) normal)
+        nlw (make-vector (x nl) (y nl) (z nl))
+        nlv (norm nlw)
+        result (if (parent? shape) (normal-to-world (:parent (:shape shape)) nlv) nlv)]
+    result))
+
 (defn normal-at
   "Return a normal vector from a point in a shape"
   ^doubles
   [shape point]
-  (let [local-point  (m*v (inverse (:transform (:shape shape))) point)
-        local-normal ((:local-normal-at shape) shape local-point)
-        world-normal (m*v (transpose (inverse (:transform (:shape shape)))) local-normal)
-        wn (make-vector (x world-normal) (y world-normal) (z world-normal))]
-    (norm wn)))
+  (let [local-point  (world-to-object shape point)
+        local-normal ((:local-normal-at shape) shape local-point)]
+    (normal-to-world shape local-normal)))
+
+(defn pattern-at-object
+  "Return the correct transformed pattern"
+  [pattern object world-point]
+  (let [object-point  (world-to-object object world-point)
+        pattern-point (m*v (inverse (:transform (:pattern pattern))) object-point)]
+    ((:pattern-at pattern) pattern pattern-point)))
 
 (defn reflect
   "Reflect a vector over another"

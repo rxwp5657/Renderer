@@ -139,7 +139,7 @@
       (c+ refracted (c+ surface reflected)))))
 
 (defn color-at
-  "Get the color on an intersection if there isn't an intersection, return black color"
+  "Get the color on an intersection, if there isn't an intersection, return black color"
   [world ray remaining]
   (let [intersections (intersect-world world ray)
         hit (hit intersections)]

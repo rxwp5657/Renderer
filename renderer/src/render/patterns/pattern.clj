@@ -17,10 +17,3 @@
   "Change transform from pattern"
   [pattern transform]
   (assoc pattern :pattern (set-pattern-p-transform (:pattern pattern) transform)))
-
-(defn pattern-at-object
-  "Return the correct transformed pattern"
-  [pattern object world-point]
-  (let [object-point  (m*v (inverse (:transform (:shape object))) world-point)
-        pattern-point (m*v (inverse (:transform (:pattern pattern))) object-point)]
-    ((:pattern-at pattern) pattern pattern-point)))

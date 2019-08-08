@@ -11,6 +11,7 @@
             [render.primitives.plane :refer :all]
             [render.primitives.cone :refer :all]
             [render.primitives.group :refer :all]
+            [render.primitives.triangle :refer :all]
             [render.comp.camera :refer :all]
             [render.comp.world :refer :all]
             [render.core  :refer :all]
@@ -1154,7 +1155,132 @@
 
 (deftest group-feature-1
   (testing "Creating a group"
-    (let [g  (make-group)
-          g2 (make-group (identity-m) (make-sphere) (make-plane))]
-      (is (m= (:transform g) (identity-m)))
+    (let [g  (make-group)]
+      (is (m= (:transform (:shape g)) (identity-m)))
       (is (empty? (:shapes g))))))
+
+(deftest shape-parent
+  (testing "Shape has a father"
+    (let [s (make-shape)]
+      (is (nil? (:parent s))))))
+
+(deftest group-feature-2
+  (testing "Adding a child to a group"
+    (let [g (make-group)
+          s (add-child g (make-sphere))]
+      (is (.contains (:shapes g) s))
+      (is (= g (:parent (:shape s)))))))
+
+(deftest group-feature-3
+  (testing "Intersecting ray with an empty group"
+    (let [g  (make-group)
+          r  (make-ray (make-point 0 0 0) (make-vector 0 0 1))
+          xs ((:local-intersect g) g r)]
+      (is (empty? xs)))))
+
+(deftest group-feature-4
+  (testing "Intersecting ray with group"
+    (let [g  (make-group)
+          s1 (add-child g (make-sphere))
+          s2 (add-child g (set-transform (make-sphere) (translation 0 0 -3)))
+          s3 (add-child g (set-transform (make-sphere) (translation 5 0 0)))
+          r  (make-ray (make-point 0 0 -5) (make-vector 0 0 1))
+          xs ((:local-intersect g) g r)]
+      (is (= 4  (count xs)))
+      (is (= s2 (:object (get xs 0))))
+      (is (= s2 (:object (get xs 1))))
+      (is (= s1 (:object (get xs 2))))
+      (is (= s1 (:object (get xs 3)))))))
+
+(deftest group-feature-5
+  (testing "Intersecting a transformed group"
+    (let [g (set-transform (make-group) (scaling 2 2 2))
+          s (add-child g (set-transform (make-sphere) (translation 5 0 0)))
+          r (make-ray (make-point 10 0 -10) (make-vector 0 0 1))
+          xs (intersect g r)]
+      (is (= 2 (count xs))))))
+
+(deftest group-feature-6
+  (testing "Converting a point from world to object space"
+    (let [g1 (set-transform (make-group) (rotation-y (/ Math/PI 2)))
+          g2 (add-child g1 (set-transform (make-group) (scaling 2 2 2)))
+          s  (add-child g2 (set-transform (make-sphere) (translation 5 0 0)))
+          p  (world-to-object s (make-point -2 0 -10))]
+      (is (v= p (make-point 0 0  -1.0000000000000002))))))
+
+(deftest group-feature-7
+  (testing "Converting a normal from object to world space"
+    (let [g1 (set-transform (make-group) (rotation-y (/ Math/PI 2)))
+          g2 (add-child g1 (set-transform (make-group) (scaling 1 2 3)))
+          s  (add-child g2 (set-transform (make-sphere) (translation 5 0 0)))
+          v  (normal-to-world s (make-vector (/ (Math/sqrt 3) 3) (/ (Math/sqrt 3) 3) (/ (Math/sqrt 3) 3)))]
+      (is (v= v (make-vector 0.28571428571428575  0.42857142857142855  -0.8571428571428571))))))
+
+(deftest group-feature-8
+  (testing "Finding the normal on a child object"
+    (let [g1 (set-transform (make-group) (rotation-y (/ Math/PI 2)))
+          g2 (add-child g1 (set-transform (make-group) (scaling 1 2 3)))
+          s  (add-child g2 (set-transform (make-sphere) (translation 5 0 0)))
+          v  (normal-at s (make-point 1.7321 1.1547 -5.5774))]
+      (is (v= v (make-vector 0.28570368184140726  0.428543151781141  -0.8571605294481016))))))
+
+;; Triangles
+
+(deftest triangle-feature-1
+  (testing "Triangle creation"
+    (let [p1 (make-point  0 1 0)
+          p2 (make-point -1 0 0)
+          p3 (make-point  1 0 0)
+          triangle (make-triangle p1 p2 p3)]
+      (is (v= p1 (:p1 triangle)))
+      (is (v= p2 (:p2 triangle)))
+      (is (v= p3 (:p3 triangle)))
+      (is (v= (make-vector -1 -1 0) (:e1 triangle)))
+      (is (v= (make-vector  1 -1 0) (:e2 triangle)))
+      (is (v= (make-vector  0 0 -1) (:normal triangle))))))
+
+
+(deftest triangle-feature-2
+  (testing "Triangle normal"
+    (let [t  (make-triangle (make-point 0 1 0) (make-point -1 0 0) (make-point 1 0 0))
+          n1 ((:local-normal-at t) t (make-point 0 0.5 0))
+          n2 ((:local-normal-at t) t (make-point -0.5 0.75 0))
+          n3 ((:local-normal-at t) t (make-point  0.5 0.25 0))]
+      (is (v= n1 (:normal t)))
+      (is (v= n2 (:normal t)))
+      (is (v= n3 (:normal t))))))
+
+(deftest triangle-feature-3
+  (testing "Ray - triangle intersection (misses)"
+    (let [t  (make-triangle (make-point 0 1 0) (make-point -1 0 0) (make-point 1 0 0))
+          r  (make-ray (make-point 0 -1 -2) (make-vector 0 1 0))
+          xs ((:local-intersect t) t r)]
+      (is (empty? xs)))))
+
+(deftest triangle-feature-4
+  (testing "Ray - triangle intersection (misses p1 - p3 edge)"
+    (let [t  (make-triangle (make-point 0 1 0) (make-point -1 0 0) (make-point 1 0 0))
+          r  (make-ray (make-point 1 1 -2) (make-vector 0 0 1))
+          xs ((:local-intersect t) t r)]
+      (is (empty? xs)))))
+
+(deftest triangle-feature-5
+  (testing "Ray - triangle intersection (misses p1 - p2 edge)"
+    (let [t  (make-triangle (make-point 0 1 0) (make-point -1 0 0) (make-point 1 0 0))
+          r  (make-ray (make-point -1 1 -2) (make-vector 0 0 1))
+          xs ((:local-intersect t) t r)]
+      (is (empty? xs)))))
+
+(deftest triangle-feature-6
+  (testing "Ray - triangle intersection (misses p2 - p3 edge)"
+    (let [t  (make-triangle (make-point 0 1 0) (make-point -1 0 0) (make-point 1 0 0))
+          r  (make-ray (make-point 0 -1 -2) (make-vector 0 0 1))
+          xs ((:local-intersect t) t r)]
+      (is (empty? xs)))))
+
+(deftest triangle-feature-7
+  (testing "Ray - triangle intersection (strikes)"
+    (let [t  (make-triangle (make-point 0 1 0) (make-point -1 0 0) (make-point 1 0 0))
+          r  (make-ray (make-point 0 0.5 -2) (make-vector 0 0 1))
+          xs ((:local-intersect t) t r)]
+      (is (= 2.0 (:t (first xs)))))))
